@@ -12,7 +12,8 @@
     "prettier:comment": "自动格式化 src 目录下的所有 .ts 文件",
     "prettier": "prettier --write \"src/**/*.ts\"",
     "build:comment": "构建",
-    "build": "npm run eslint && npm run prettier && rm -rf lib && tsc --build"
+    "watch": "nodemon --ignore dist/ --ignore node_modules/ --ignore src/Shaders --watch src/ -C -e js,jsx,ts,tsx,css,less --debug -x 'pnpm run build && yalc publish'",
+    "build": "node compileGLSL.js && npm run eslint && npm run prettier && rm -rf lib && tsc --build"
   },
   "keywords": [],
   "author": "",
@@ -35,5 +36,8 @@
       "npm run eslint",
       "npm run prettier"
     ]
+  },
+  "dependencies": {
+    "@webgpu/types": "^0.1.51"
   }
 }

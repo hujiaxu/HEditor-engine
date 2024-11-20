@@ -1,7 +1,7 @@
 {
   "compileOnSave": true,
   "compilerOptions": {
-    "target": "ES2018",
+    "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "node",
     "experimentalDecorators": true,
@@ -15,7 +15,8 @@
     "outDir": "lib",
     "baseUrl": "./",
     "strict": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "typeRoots": ["./node_modules/@webgpu/types", "./node_modules/@types"],
   },
   "exclude": [
     "lib",
