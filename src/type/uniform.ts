@@ -2,6 +2,9 @@ import { ContextType } from './context'
 
 export interface UniformOptions {
   gl: ContextType
+  location: WebGLUniformLocation
+  type: UniformType
+  values?: number[]
 }
 
 export enum UniformType {

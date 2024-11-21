@@ -10,6 +10,14 @@ export default class Uniform {
     get type(): UniformType;
     set type(type: UniformType);
     gl: ContextType;
-    constructor({ gl }: UniformOptions);
-    set(): void;
+    /**
+     * Constructs a new Uniform instance.
+     *
+     * @param {UniformOptions} options - The options for initializing the uniform.
+     * @param {ContextType} options.gl - The WebGL context used for rendering.
+     * @param {number} options.location - The location of the uniform in the shader program.
+     * @param {UniformType} options.type - The data type of the uniform.
+     */
+    constructor({ gl, location, type }: UniformOptions);
+    set(value: number[]): void;
 }

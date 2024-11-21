@@ -1,49 +1,52 @@
-import { getExtension, isSuppotedGPU } from '../../utils'
+import { getExtension } from '../../utils'
 import { ContextOptions, ContextType, PrimitiveType } from '../../type'
 import ShaderProgram from './ShaderProgram'
 import VertexShaderSource from '../../Shaders/vertex'
 import FragmentShaderSource from '../../Shaders/fragment'
 import VertexArray from './VertexArray'
 import Geometry from '../Scene/Geometry'
+import UniformState from './UniformState'
 
 export default class Context {
-  canvas: HTMLCanvasElement
+  private _canvas: HTMLCanvasElement
 
   private _useGPU: boolean = false
-
-  gl: ContextType | undefined
-
   private _gpuAdapter: GPUAdapter | undefined
   private _gpuDevice: GPUDevice | undefined
 
+  private _uniformState: UniformState
+
+  gl: ContextType
+
   shaderProgram: ShaderProgram | undefined
 
-  glCreateVertexArray: (() => WebGLVertexArrayObject | null) | undefined
-  glBindVertexArray:
-    | ((vertexArray: WebGLVertexArrayObject | null) => void)
-    | undefined
-  glDeleteVertexArray:
-    | ((vertexArray: WebGLVertexArrayObject) => void)
-    | undefined
+  glCreateVertexArray!: () => WebGLVertexArrayObject | null
+  glBindVertexArray!: (vertexArray: WebGLVertexArrayObject | null) => void
+  glDeleteVertexArray!: (vertexArray: WebGLVertexArrayObject) => void
 
   constructor(options: ContextOptions) {
-    this.canvas = options.canvas
+    this._canvas = options.canvas
     this._useGPU = options.isUseGPU
 
-    this.initContext()
+    this.gl = this._initContext()
+    this._initialFunctions()
+
+    this._uniformState = new UniformState({
+      gl: this.gl
+    })
   }
 
-  async initContext() {
-    if (this._useGPU) {
-      const gpuAdapter = await isSuppotedGPU()
-      if (!gpuAdapter) {
-        throw new Error('The browser does not support WebGPU.')
-      }
-      const device = await gpuAdapter.requestDevice()
+  private _initContext() {
+    // if (this._useGPU) {
+    //   const gpuAdapter = await isSuppotedGPU()
+    //   if (!gpuAdapter) {
+    //     throw new Error('The browser does not support WebGPU.')
+    //   }
+    //   const device = await gpuAdapter.requestDevice()
 
-      this._gpuAdapter = gpuAdapter
-      this._gpuDevice = device
-    }
+    //   this._gpuAdapter = gpuAdapter
+    //   this._gpuDevice = device
+    // }
     const isSuppotedwebgl2 = typeof WebGL2RenderingContext !== 'undefined'
     const contextType =
       this._gpuAdapter && this._useGPU
@@ -52,22 +55,20 @@ export default class Context {
           ? 'webgl2'
           : 'webgl'
 
-    const context = this.canvas.getContext(contextType) as ContextType
+    const gl = this._canvas.getContext(contextType) as ContextType
 
-    if (!context) {
+    if (!gl) {
       throw new Error('The browser supports WebGL, but initialization failed.')
     }
-    if (context instanceof GPUCanvasContext && this._gpuDevice) {
-      context.configure({
+    if (gl instanceof GPUCanvasContext && this._gpuDevice) {
+      gl.configure({
         device: this._gpuDevice,
         format: navigator.gpu.getPreferredCanvasFormat(),
         alphaMode: 'premultiplied'
       })
     }
-    this.gl = context
 
-    this._initialFunctions()
-    return this.gl
+    return gl
   }
 
   private _initialFunctions() {
@@ -91,9 +92,17 @@ export default class Context {
     }
   }
 
-  draw({ context, geometry }: { context: Context; geometry: Geometry }) {
+  draw({
+    context,
+    geometry,
+    uniformState
+  }: {
+    context: Context
+    geometry: Geometry
+    uniformState?: UniformState
+  }) {
     if (!context.gl) {
-      throw new Error('Context is not initialized.')
+      throw new Error('Context is not initialized. ')
     }
 
     context.gl.clearColor(0, 0, 0, 0)
@@ -104,7 +113,18 @@ export default class Context {
       vertexShaderSource: VertexShaderSource,
       fragmentShaderSource: FragmentShaderSource
     })
+    shaderProgram.initialize()
+    shaderProgram.bind()
+
+    this.feedUniforms({ shaderProgram })
     this.shaderProgram = shaderProgram
+
+    if (
+      uniformState &&
+      uniformState.uniformMap !== context._uniformState.uniformMap
+    ) {
+      context._uniformState.update(uniformState)
+    }
 
     const va = new VertexArray({
       context,
@@ -114,11 +134,25 @@ export default class Context {
     console.log(va)
     context.glBindVertexArray!(va.vao)
 
+    context.gl.viewport(
+      0,
+      0,
+      context.gl.drawingBufferWidth,
+      context.gl.drawingBufferHeight
+    )
+
     context.gl.drawElements(
       PrimitiveType.TRIANGLES,
       6,
       context.gl.UNSIGNED_SHORT,
       0
     )
+  }
+  feedUniforms({ shaderProgram }: { shaderProgram: ShaderProgram }) {
+    for (const uniformName in shaderProgram.uniforms) {
+      const uniform = shaderProgram.uniforms[uniformName]
+
+      uniform.set(this._uniformState.uniformMap[uniformName])
+    }
   }
 }

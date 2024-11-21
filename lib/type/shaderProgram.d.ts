@@ -4,3 +4,12 @@ export interface ShaderProgramOptions {
     fragmentShaderSource: string;
     gl: ContextType;
 }
+export interface ShaderSourceCache {
+    vertexShaderSource: string;
+    fragmentShaderSource: string;
+}
+export type VertexAttributesType = Record<string, {
+    location: number;
+    name: string;
+    type: number;
+}>;

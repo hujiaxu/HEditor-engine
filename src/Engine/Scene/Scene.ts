@@ -9,6 +9,14 @@ export default class Scene {
 
   context: Context
 
+  get drawingBufferWidth() {
+    return this.context.gl.drawingBufferWidth
+  }
+
+  get drawingBufferHeight() {
+    return this.context.gl.drawingBufferHeight
+  }
+
   constructor(options: SceneOptions) {
     this.canvas = options.canvas
     this.isUseGPU = options.isUseGPU

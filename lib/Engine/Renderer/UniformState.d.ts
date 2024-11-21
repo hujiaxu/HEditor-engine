@@ -1,7 +1,9 @@
+import { ContextType, UniformStateOptions } from '../../type';
 export default class UniformState {
-    gl: WebGLRenderingContext;
+    gl: ContextType;
     uniformMap: {
-        [key: string]: WebGLUniformLocation;
+        [key: string]: number[];
     };
-    constructor(gl: WebGLRenderingContext);
+    constructor({ gl }: UniformStateOptions);
+    update(uniformState: UniformState): void;
 }

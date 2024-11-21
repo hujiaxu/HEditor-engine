@@ -29,19 +29,33 @@ export default class Uniform {
 
   gl: ContextType
 
-  constructor({ gl }: UniformOptions) {
+  /**
+   * Constructs a new Uniform instance.
+   *
+   * @param {UniformOptions} options - The options for initializing the uniform.
+   * @param {ContextType} options.gl - The WebGL context used for rendering.
+   * @param {number} options.location - The location of the uniform in the shader program.
+   * @param {UniformType} options.type - The data type of the uniform.
+   */
+  constructor({ gl, location, type }: UniformOptions) {
     this.gl = gl
+    this._location = location
+    this._type = type
   }
 
-  set() {
+  set(value: number[]) {
+    this.value = value
     switch (this._type) {
       case UniformType.FLOAT:
+      case UniformType.INT:
         this.gl.uniform1f(this.location, this.value[0])
         break
       case UniformType.FLOAT_VEC2:
+      case UniformType.INT_VEC2:
         this.gl.uniform2f(this.location, this.value[0], this.value[1])
         break
       case UniformType.FLOAT_VEC3:
+      case UniformType.INT_VEC3:
         this.gl.uniform3f(
           this.location,
           this.value[0],
@@ -50,6 +64,7 @@ export default class Uniform {
         )
         break
       case UniformType.FLOAT_VEC4:
+      case UniformType.INT_VEC4:
         this.gl.uniform4f(
           this.location,
           this.value[0],
@@ -57,6 +72,15 @@ export default class Uniform {
           this.value[2],
           this.value[3]
         )
+        break
+      case UniformType.FLOAT_MAT2:
+        this.gl.uniformMatrix2fv(this.location, false, this.value)
+        break
+      case UniformType.FLOAT_MAT3:
+        this.gl.uniformMatrix3fv(this.location, false, this.value)
+        break
+      case UniformType.FLOAT_MAT4:
+        this.gl.uniformMatrix4fv(this.location, false, this.value)
         break
     }
   }

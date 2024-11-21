@@ -1,21 +1,27 @@
 import { ContextOptions, ContextType } from '../../type';
 import ShaderProgram from './ShaderProgram';
 import Geometry from '../Scene/Geometry';
+import UniformState from './UniformState';
 export default class Context {
-    canvas: HTMLCanvasElement;
+    private _canvas;
     private _useGPU;
-    gl: ContextType | undefined;
     private _gpuAdapter;
     private _gpuDevice;
+    private _uniformState;
+    gl: ContextType;
     shaderProgram: ShaderProgram | undefined;
-    glCreateVertexArray: (() => WebGLVertexArrayObject | null) | undefined;
-    glBindVertexArray: ((vertexArray: WebGLVertexArrayObject | null) => void) | undefined;
-    glDeleteVertexArray: ((vertexArray: WebGLVertexArrayObject) => void) | undefined;
+    glCreateVertexArray: () => WebGLVertexArrayObject | null;
+    glBindVertexArray: (vertexArray: WebGLVertexArrayObject | null) => void;
+    glDeleteVertexArray: (vertexArray: WebGLVertexArrayObject) => void;
     constructor(options: ContextOptions);
-    initContext(): Promise<ContextType>;
+    private _initContext;
     private _initialFunctions;
-    draw({ context, geometry }: {
+    draw({ context, geometry, uniformState }: {
         context: Context;
         geometry: Geometry;
+        uniformState?: UniformState;
+    }): void;
+    feedUniforms({ shaderProgram }: {
+        shaderProgram: ShaderProgram;
     }): void;
 }
