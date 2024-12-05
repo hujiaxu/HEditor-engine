@@ -24,6 +24,10 @@ export default class Context {
   glBindVertexArray!: (vertexArray: WebGLVertexArrayObject | null) => void
   glDeleteVertexArray!: (vertexArray: WebGLVertexArrayObject) => void
 
+  get uniformState() {
+    return this._uniformState
+  }
+
   constructor(options: ContextOptions) {
     this._canvas = options.canvas
     this._useGPU = options.isUseGPU

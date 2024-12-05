@@ -1,4 +1,6 @@
 import { ContextType, UniformStateOptions } from '../../type'
+import Matrix4 from '../Core/Matrix4'
+import Camera from '../Scene/Camera'
 
 export default class UniformState {
   gl: ContextType
@@ -21,5 +23,13 @@ export default class UniformState {
   update(uniformState: UniformState) {
     this.gl = uniformState.gl
     this.uniformMap = uniformState.uniformMap
+  }
+
+  updateCamera(camera: Camera) {
+    const projectionMatrix = camera.frustum.projectionMatrix
+    const viewMatrix = camera.viewMatrix
+
+    this.uniformMap['u_projectionMatrix'] = Matrix4.toArray(projectionMatrix)
+    this.uniformMap['u_viewMatrix'] = Matrix4.toArray(viewMatrix)
   }
 }

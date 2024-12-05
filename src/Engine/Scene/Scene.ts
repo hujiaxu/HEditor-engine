@@ -1,5 +1,10 @@
 import { ComponentDatatype, PrimitiveType, SceneOptions } from '../../type'
+import defaultValue from '../Core/DefaultValue'
+import Ellipsoid from '../Core/Ellipsoid'
+import GeographicProjection from '../Core/GeographicProjection'
 import Context from '../Renderer/Context'
+import Camera from './Camera'
+import FrameState from './FrameState'
 import Geometry from './Geometry'
 import GeometryAttribute from './GeometryAttribute'
 
@@ -7,24 +12,51 @@ export default class Scene {
   canvas: HTMLCanvasElement
   isUseGPU: boolean
 
-  context: Context
+  private _context: Context
+  private _frameState: FrameState
+  private _ellipsoid: Ellipsoid
 
+  camera: Camera
+  private _mapProjection: GeographicProjection
+
+  get mapProjection() {
+    return this._mapProjection
+  }
+  get ellipsoid() {
+    return this._ellipsoid
+  }
   get drawingBufferWidth() {
-    return this.context.gl.drawingBufferWidth
+    return this._context.gl.drawingBufferWidth
   }
 
   get drawingBufferHeight() {
-    return this.context.gl.drawingBufferHeight
+    return this._context.gl.drawingBufferHeight
   }
 
   constructor(options: SceneOptions) {
     this.canvas = options.canvas
     this.isUseGPU = options.isUseGPU
 
-    this.context = new Context({
+    this._context = new Context({
       canvas: this.canvas,
       isUseGPU: this.isUseGPU
     })
+
+    this._frameState = new FrameState({
+      context: this._context
+    })
+    this._ellipsoid = defaultValue<Ellipsoid>(
+      options.ellipsoid,
+      Ellipsoid.default
+    )
+    this._mapProjection = defaultValue<GeographicProjection>(
+      options.mapProjection,
+      new GeographicProjection(this._ellipsoid)
+    )
+
+    console.log(this._frameState, 'frameState')
+
+    this.camera = new Camera(this)
   }
 
   draw() {
@@ -47,8 +79,11 @@ export default class Scene {
       indices: new Uint16Array([0, 1, 2, 0, 2, 3]),
       primitiveType: PrimitiveType.TRIANGLES
     })
-    this.context.draw({
-      context: this.context,
+
+    const { uniformState } = this._context
+    uniformState.updateCamera(this.camera)
+    this._context.draw({
+      context: this._context,
       geometry
     })
   }

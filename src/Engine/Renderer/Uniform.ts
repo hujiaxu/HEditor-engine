@@ -44,6 +44,7 @@ export default class Uniform {
   }
 
   set(value: number[]) {
+    if (!value) return
     this.value = value
     switch (this._type) {
       case UniformType.FLOAT:

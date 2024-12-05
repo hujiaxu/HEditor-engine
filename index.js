@@ -1,3 +1,4 @@
-import { Viewer } from './lib/index.js'
+// import { Viewer,  } from './lib/index.js'
 
-export { Viewer }
+// export { Viewer }
+export * from './lib/index'

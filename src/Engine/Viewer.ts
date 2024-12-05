@@ -23,6 +23,13 @@ export default class Viewer {
     canvas.height = canvasHeight || element.clientHeight
     canvas.width = canvasWidth || element.clientWidth
 
+    canvas.oncontextmenu = () => {
+      return false
+    }
+    canvas.onselectstart = () => {
+      return false
+    }
+
     this.scene = new Scene({
       canvas: this.canvas,
       isUseGPU: useGPU
