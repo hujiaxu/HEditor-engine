@@ -105,7 +105,7 @@ export default class CameraEventAggregator {
     aggregator._eventHandler.setInputAction(
       (delta: number) => {
         const arcLength = 7.5 * HEditorMath.toRadians(delta)
-        pressTime[key] = releaseTime[key] = Date.now()
+        pressTime[key] = releaseTime[key] = new Date()
 
         movement.endPosition.x = 0.0
         movement.endPosition.y = arcLength
@@ -359,16 +359,7 @@ export default class CameraEventAggregator {
     )
   }
 
-  isMoving(type: CameraEventType, modifier: KeyboardEventModifier | undefined) {
-    if (!defined(type)) {
-      throw new Error('type is required')
-    }
-
-    const key = getKey(type, modifier)
-
-    return !this._update[key]
-  }
-  getMovement(
+  public isMoving(
     type: CameraEventType,
     modifier: KeyboardEventModifier | undefined
   ) {
@@ -377,11 +368,23 @@ export default class CameraEventAggregator {
     }
 
     const key = getKey(type, modifier)
-    const movement = this._movement[key] as Movement
+
+    return !this._update[key]
+  }
+  public getMovement(
+    type: CameraEventType,
+    modifier: KeyboardEventModifier | undefined
+  ) {
+    if (!defined(type)) {
+      throw new Error('type is required')
+    }
+
+    const key = getKey(type, modifier)
+    const movement = this._movement[key] as Movement | PinchMovement
 
     return movement
   }
-  getLastMovement(
+  public getLastMovement(
     type: CameraEventType,
     modifier: KeyboardEventModifier | undefined
   ) {
@@ -397,7 +400,7 @@ export default class CameraEventAggregator {
 
     return undefined
   }
-  getStartMousePosition(
+  public getStartMousePosition(
     type: CameraEventType,
     modifier: KeyboardEventModifier | undefined
   ) {
@@ -411,5 +414,41 @@ export default class CameraEventAggregator {
     const key = getKey(type, modifier)
 
     return this._eventStartPosition[key]
+  }
+  public getButtonPressTime(
+    type: CameraEventType,
+    modifier: KeyboardEventModifier | undefined
+  ) {
+    if (!defined(type)) {
+      throw new Error('type is required')
+    }
+
+    const key = getKey(type, modifier)
+
+    return this._pressTime[key]
+  }
+  public getButtonReleaseTime(
+    type: CameraEventType,
+    modifier: KeyboardEventModifier | undefined
+  ) {
+    if (!defined(type)) {
+      throw new Error('type is required')
+    }
+
+    const key = getKey(type, modifier)
+
+    return this._releaseTime[key]
+  }
+  public isButtonDown(
+    type: CameraEventType,
+    modifier: KeyboardEventModifier | undefined
+  ) {
+    if (!defined(type)) {
+      throw new Error('type is required')
+    }
+
+    const key = getKey(type, modifier)
+
+    return this._isDown[key]
   }
 }

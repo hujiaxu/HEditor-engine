@@ -24,6 +24,11 @@ export default class Matrix3 {
   static COLUMN0ROW2: number
   static COLUMN1ROW2: number
   static COLUMN2ROW2: number
+  static getColumn: (
+    m: Matrix3,
+    index: number,
+    result?: Cartesian3
+  ) => Cartesian3
 
   get values() {
     return this._values
@@ -261,5 +266,20 @@ Matrix3.multiply = (left: Matrix3, right: Matrix3, result?: Matrix3) => {
   result.setValue(7, column2Row1)
   result.setValue(8, column2Row2)
 
+  return result
+}
+Matrix3.getColumn = (
+  m: Matrix3,
+  index: number,
+  result: Cartesian3 = new Cartesian3()
+) => {
+  const startIndex = index * 3
+  const x = m.values[startIndex]
+  const y = m.values[startIndex + 1]
+  const z = m.values[startIndex + 2]
+
+  result.x = x
+  result.y = y
+  result.z = z
   return result
 }

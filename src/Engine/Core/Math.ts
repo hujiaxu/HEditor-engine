@@ -4,6 +4,41 @@ import { defined } from './Defined'
 const HEditorMath = {
   PI: Math.PI,
   TWO_PI: 2.0 * Math.PI,
+  PI_OVER_TWO: Math.PI / 2.0,
+  zeroToTwoPi: function (angle: number): number {
+    if (!defined(angle)) {
+      throw new Error('angle is required.')
+    }
+
+    if (angle >= 0 && angle < HEditorMath.TWO_PI) {
+      return angle
+    }
+
+    const mod = this.mod(angle, HEditorMath.TWO_PI)
+    if (
+      Math.abs(mod) < HEditorMath.EPSILON14 &&
+      Math.abs(angle) > HEditorMath.EPSILON14
+    ) {
+      return this.TWO_PI
+    }
+
+    return mod
+  },
+  mod: function (m: number, n: number): number {
+    if (!defined(m) || !defined(n)) {
+      throw new Error('m and n are required.')
+    }
+
+    if (n === 0) {
+      throw new Error('divisor cannot be 0.')
+    }
+
+    if (this.sign(m) === this.sign(n) && Math.abs(m) < Math.abs(n)) {
+      return m
+    }
+
+    return ((m % n) + n) % n
+  },
   cos: function (radians: number): number {
     return Math.cos(radians)
   },

@@ -9,6 +9,8 @@ export * from './scene/keyboardEventModifier'
 export * from './scene/cameraEventAggregator'
 export * from './scene/screenSpaceEventType'
 export * from './scene/screenSpaceEventHandler'
+export * from './scene/sceneMode'
+export * from './scene/camera'
 
 export * from './core/math'
 export * from './core/associativeArray'

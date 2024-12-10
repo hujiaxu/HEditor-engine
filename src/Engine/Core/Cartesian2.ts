@@ -1,3 +1,4 @@
+import Cartesian3 from './Cartesian3'
 import HEditorMath from './Math'
 
 export default class Cartesian2 {
@@ -18,6 +19,26 @@ export default class Cartesian2 {
     relativeEpsilon?: number,
     absoluteEpsilon?: number
   ) => boolean
+  static subtract: (
+    left: Cartesian2,
+    right: Cartesian2,
+    result?: Cartesian2
+  ) => Cartesian2
+  static add: (
+    left: Cartesian2,
+    right: Cartesian2,
+    result?: Cartesian2
+  ) => Cartesian2
+  static distance: (left: Cartesian2, right: Cartesian2) => number
+  static multiplyByScalar: (
+    cartesian: Cartesian2,
+    scalar: number,
+    result?: Cartesian2
+  ) => Cartesian2
+  static fromCartesian3: (
+    cartesian: Cartesian3,
+    result?: Cartesian2
+  ) => Cartesian2
   constructor(x?: number, y?: number) {
     this.x = x || 0.0
     this.y = y || 0.0
@@ -74,4 +95,57 @@ Cartesian2.equalsEpsilon = function (
     ) &&
     HEditorMath.equalsEpsilon(left.y, right.y, relativeEpsilon, absoluteEpsilon)
   )
+}
+Cartesian2.subtract = function (
+  left: Cartesian2,
+  right: Cartesian2,
+  result?: Cartesian2
+) {
+  if (!result) {
+    result = new Cartesian2()
+  }
+  result.x = left.x - right.x
+  result.y = left.y - right.y
+  return result
+}
+Cartesian2.add = function (
+  left: Cartesian2,
+  right: Cartesian2,
+  result?: Cartesian2
+) {
+  if (!result) {
+    result = new Cartesian2()
+  }
+  result.x = left.x + right.x
+  result.y = left.y + right.y
+  return result
+}
+Cartesian2.distance = function (left: Cartesian2, right: Cartesian2) {
+  return Math.sqrt(
+    (left.x - right.x) * (left.x - right.x) +
+      (left.y - right.y) * (left.y - right.y)
+  )
+}
+Cartesian2.multiplyByScalar = function (
+  cartesian: Cartesian2,
+  scalar: number,
+  result?: Cartesian2
+) {
+  if (!result) {
+    result = new Cartesian2()
+  }
+  result.x = cartesian.x * scalar
+  result.y = cartesian.y * scalar
+  return result
+}
+Cartesian2.fromCartesian3 = function (
+  cartesian: Cartesian3,
+  result?: Cartesian2
+) {
+  if (!result) {
+    result = new Cartesian2()
+  }
+  result.x = cartesian.x
+  result.y = cartesian.y
+  return result
 }

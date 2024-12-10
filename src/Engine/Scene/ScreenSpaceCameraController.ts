@@ -1,9 +1,11 @@
 import {
   CameraEventType,
   KeyboardEventModifier,
+  LastInertiaConstructor,
   Movement,
   MovePositionEvent,
-  PinchMovement
+  PinchMovement,
+  SceneMode
 } from '../../type'
 import Cartesian2 from '../Core/Cartesian2'
 import Cartesian3 from '../Core/Cartesian3'
@@ -23,7 +25,11 @@ import CameraEventAggregator from './CameraEventAggregator'
 import Globe from './Globe'
 import OrthographicFrustum from '../Core/OrthographicFrustum'
 import Scene from './Scene'
-import TweenCollection from './TweenCollection'
+// import TweenCollection from './TweenCollection'
+import PerspectiveFrustum from '../Core/PerspectiveFrustum'
+import Plane from '../Core/Plane'
+import HeadingPitchRoll from '../Core/HeadingPitchRoll'
+import SceneTransforms from './SceneTransforms'
 
 let preIntersectionDistance = 0
 
@@ -32,11 +38,21 @@ interface EventTypeAndModifier {
   modifier: KeyboardEventModifier
 }
 
-const scratchDadii = new Cartesian3()
-const scratchLookUp = new Cartesian3()
-const scratchEllipsoid = new Ellipsoid()
-const scratchCartographic = new Cartographic()
-const scratchMousePosition = new Cartesian3()
+const sameMousePosition = (movement: MovePositionEvent) => {
+  return Cartesian2.equalsEpsilon(
+    movement.startPosition,
+    movement.endPosition,
+    HEditorMath.EPSILON14
+  )
+}
+const decay = (time: number, coefficient: number) => {
+  if (time < 0) {
+    return 0.0
+  }
+
+  const tau = (1.0 - coefficient) * 25.0
+  return Math.exp(-tau / time)
+}
 
 const pickGlobeScrachRay = new Ray()
 
@@ -61,6 +77,14 @@ const zoomCVWindowRay = new Ray()
 const zoom3DCartographic = new Cartographic()
 
 const tilt3DRay = new Ray()
+
+type LastInertiaType =
+  | '_lastInertiaSpinMovement'
+  | '_lastInertiaZoomMovement'
+  | '_lastInertiaTranslateMovement'
+  | '_lastInertiaTiltMovement'
+
+const inertiaMaxClickTimeThreshold = 0.4
 
 export default class ScreenSpaceCameraController {
   enableInputs = true
@@ -109,11 +133,16 @@ export default class ScreenSpaceCameraController {
   enableCollisionDetection = true
 
   private _aggregator: CameraEventAggregator
-  private _lastInertiaZoomMovement = undefined
-  private _lastInertiaTranslateMovement = undefined
-  private _lastInertiaTiltMovement = undefined
+  private _lastInertiaSpinMovement: LastInertiaConstructor | undefined =
+    undefined
+  private _lastInertiaZoomMovement: LastInertiaConstructor | undefined =
+    undefined
+  private _lastInertiaTranslateMovement: LastInertiaConstructor | undefined =
+    undefined
+  private _lastInertiaTiltMovement: LastInertiaConstructor | undefined =
+    undefined
 
-  private _inertiaDisablers = {
+  private _inertiaDisablers: { [key: string]: string[] } = {
     _lastInertiaZoomMovement: [
       '_lastInertiaSpinMovement',
       '_lastInertiaTranslateMovement',
@@ -125,31 +154,29 @@ export default class ScreenSpaceCameraController {
     ]
   }
 
-  private _tweens = new TweenCollection()
-  private _tween = undefined
-
-  private _horizontalRotationAxis = undefined
+  // private _tweens = new TweenCollection()
+  // private _tween = undefined
 
   private _tiltCenterMousePosition = new Cartesian2(-1.0, -1.0)
   private _tiltCenter = new Cartesian3()
   private _rotateMousePosition = new Cartesian2(-1.0, -1.0)
   private _rotateStartPosition = new Cartesian3()
   private _strafeStartPosition = new Cartesian3()
-  private _strafeMousePosition = new Cartesian2()
+  // private _strafeMousePosition = new Cartesian2()
   private _strafeEndMousePosition = new Cartesian2()
   private _zoomMouseStart = new Cartesian2(-1.0, -1.0)
   private _zoomWorldPosition = new Cartesian3()
   private _useZoomWorldPosition = false
   private _panLastMousePosition = new Cartesian2()
   private _panLastWorldPosition = new Cartesian3()
-  private _tiltCVOffMap = false
+  // private _tiltCVOffMap = false
   private _looking = false
   private _rotating = false
   private _strafing = false
   private _zoomingUnderground = false
   private _zoomingOnVector = false
   private _rotatingZoom = false
-  private _adnustedHeightForTerrain = false
+  // private _adnustedHeightForTerrain = false
   private _cameraUnderground = false
 
   private _tiltOnEllipsoid = false
@@ -158,8 +185,8 @@ export default class ScreenSpaceCameraController {
   private _rotateFactor = 1.0
   private _rotateRateRangeAdjustment = 1.0
   private _maximumRotateRate = 1.77
-  private minimumRotateRate = 1.0 / 5000.0
-  private minimumZoomRate = 20.0
+  // private minimumRotateRate = 1.0 / 5000.0
+  private _minimumZoomRate = 20.0
   private _maximumZoomRate = 5906376272000.0 // distance from the Sun to Pluto in meters.
   private _minimumUndergroundPickDistance = 2000.0
   private _maximumUndergroundPickDistance = 10000.0
@@ -175,6 +202,9 @@ export default class ScreenSpaceCameraController {
   minimumPickingTerrainDistanceWithInertia: number
   minimumCollisionTerrainHeight: number
   minimumTrackBallHeight: number
+  public _adjustedHeightForTerrain: boolean = false
+  private _minimumCollisionTerrainHeight: number
+  private _lastGlobeHeight: number
 
   constructor(scene: Scene) {
     if (!scene) {
@@ -198,16 +228,21 @@ export default class ScreenSpaceCameraController {
     this.minimumCollisionTerrainHeight = Ellipsoid.WGS84.equals(ellipsoid)
       ? 150000.0
       : ellipsoid.minimumRadius * 0.0025
+    this._minimumCollisionTerrainHeight = this.minimumCollisionTerrainHeight
 
     this.minimumTrackBallHeight = Ellipsoid.WGS84.equals(ellipsoid)
       ? 7500000.0
       : ellipsoid.minimumRadius * 1.175
 
     this._aggregator = new CameraEventAggregator(scene.canvas)
+
+    this._lastGlobeHeight = 0.0
   }
 
   update() {
-    const { camera } = this._scene
+    // const { camera } = this._scene
+
+    this._update3D(this)
   }
 
   private _reactToInput(
@@ -219,7 +254,7 @@ export default class ScreenSpaceCameraController {
       | (CameraEventType | EventTypeAndModifier)[],
     action: Function,
     inertiaConstant?: number,
-    inertiaStateName?: string
+    inertiaStateName?: LastInertiaType
   ) {
     if (!defined(eventTypes)) return
 
@@ -247,12 +282,122 @@ export default class ScreenSpaceCameraController {
       if (controller.enableInputs && enabled) {
         if (movement) {
           action(controller, startPosition, movement)
+
+          controller._activateInertia(controller, inertiaStateName)
+        } else if (inertiaConstant && inertiaConstant < 1.0) {
+          controller._maintainInertia(
+            aggregator,
+            type,
+            modifier,
+            inertiaConstant,
+            action,
+            controller,
+            inertiaStateName
+          )
         }
       }
     }
   }
+  private _activateInertia(
+    controller: ScreenSpaceCameraController,
+    inertiaStateName?: LastInertiaType
+  ) {
+    if (defined(inertiaStateName)) {
+      let movementState = controller[inertiaStateName]
+      if (defined(movementState)) {
+        movementState.inertiaEnabled = true
+      }
 
-  update3D(controller: ScreenSpaceCameraController) {
+      const inertiasToDisable = controller._inertiaDisablers[inertiaStateName]
+      if (defined(inertiasToDisable)) {
+        const length = inertiasToDisable.length
+        for (let i = 0; i < length; i++) {
+          const inertiaType = inertiasToDisable[i] as LastInertiaType
+          movementState = controller[inertiaType]
+          if (defined(movementState)) {
+            movementState.inertiaEnabled = false
+          }
+        }
+      }
+    }
+  }
+  private _maintainInertia(
+    aggregator: CameraEventAggregator,
+    type: CameraEventType,
+    modifier: KeyboardEventModifier | undefined,
+    decayCoef: number,
+    action: Function,
+    object: ScreenSpaceCameraController,
+    inertiaStateName?: LastInertiaType
+  ) {
+    let movementState = inertiaStateName && object[inertiaStateName]
+    if (!defined(movementState) && inertiaStateName) {
+      movementState = object[inertiaStateName] = {
+        startPosition: new Cartesian2(),
+        endPosition: new Cartesian2(),
+        motion: new Cartesian2(),
+        inertiaEnabled: true
+      }
+    }
+
+    const ts = aggregator.getButtonPressTime(type, modifier)
+    const tr = aggregator.getButtonReleaseTime(type, modifier)
+
+    const threshold = ts && tr && (tr.getTime() - ts.getTime()) * 1000.0
+    const now = new Date()
+    const fromNow = tr && (now.getTime() - tr.getTime()) / 1000.0
+
+    if (ts && tr && threshold < inertiaMaxClickTimeThreshold) {
+      const d = decay(fromNow, decayCoef)
+
+      const lastMovement = aggregator.getLastMovement(type, modifier)
+      if (
+        !defined(lastMovement) ||
+        sameMousePosition(lastMovement) ||
+        !movementState?.inertiaEnabled
+      ) {
+        return
+      }
+
+      movementState.motion!.x =
+        (lastMovement.endPosition.x - lastMovement.startPosition.x) * 0.5
+      movementState.motion!.y =
+        (lastMovement.endPosition.y - lastMovement.startPosition.y) * 0.5
+
+      movementState.startPosition = Cartesian2.clone(
+        lastMovement.startPosition,
+        movementState.startPosition
+      )
+      movementState.endPosition = Cartesian2.multiplyByScalar(
+        movementState.motion!,
+        d,
+        movementState.endPosition
+      )
+      movementState.endPosition = Cartesian2.add(
+        movementState.startPosition,
+        movementState.endPosition,
+        movementState.endPosition
+      )
+
+      if (
+        isNaN(movementState.endPosition.x) ||
+        isNaN(movementState.endPosition.y) ||
+        Cartesian2.distance(
+          movementState.startPosition,
+          movementState.endPosition
+        ) < 0.5
+      ) {
+        return
+      }
+
+      if (!aggregator.isButtonDown(type, modifier)) {
+        const startPosition = aggregator.getStartMousePosition(type, modifier)
+        action(object, startPosition, movementState)
+      }
+    }
+  }
+
+  private _update3D(controller: ScreenSpaceCameraController) {
     controller._reactToInput(
       controller,
       controller.enableRotate,
@@ -284,11 +429,47 @@ export default class ScreenSpaceCameraController {
       controller._look3D
     )
   }
+  private _continueStrafing(
+    controller: ScreenSpaceCameraController,
+    movement: MovePositionEvent
+  ) {
+    const originalEndPosition = movement.endPosition
+    const inertialDelta = Cartesian2.subtract(
+      movement.endPosition,
+      movement.startPosition,
+      new Cartesian2()
+    )
+    const endPosition = controller._strafeEndMousePosition
+    Cartesian2.add(endPosition, inertialDelta, endPosition)
+    movement.endPosition = endPosition
+    controller._strafe(controller, movement, controller._strafeStartPosition)
+    movement.endPosition = originalEndPosition
+  }
+  private _strafe(
+    controller: ScreenSpaceCameraController,
+    movement: MovePositionEvent,
+    startPosition: Cartesian3
+  ) {
+    const scene = controller._scene
+    const camera = scene.camera
+
+    const ray = camera.getPickRay(movement.endPosition)
+
+    let direction = Cartesian3.clone(camera.direction)
+
+    const plane = Plane.fromPointNormal(startPosition, direction)
+    const intersection = IntersectionTests.rayPlane(ray, plane)
+    if (!defined(intersection)) return
+
+    direction = Cartesian3.subtract(startPosition, intersection, direction)
+
+    Cartesian3.add(camera.position, direction, camera.position)
+  }
 
   private _spin3D(
     controller: ScreenSpaceCameraController,
     startPosition: Cartesian2,
-    movement: Movement
+    movement: Movement | LastInertiaConstructor
   ) {
     const scene = controller._scene
     const camera = scene.camera
@@ -296,21 +477,21 @@ export default class ScreenSpaceCameraController {
     let ellipsoid = controller._ellipsoid
 
     if (!Matrix4.equals(camera.transform, Matrix4.IDENTITY)) {
-      controller.rotate3D(controller, startPosition, movement)
+      controller._rotate3D(controller, startPosition, movement)
       return
     }
 
     let magnitude, radii
 
-    const up = ellipsoid.geodeticSurfaceNormal(camera.position, scratchLookUp)
+    const up = ellipsoid.geodeticSurfaceNormal(camera.position)
 
     if (Cartesian2.equals(startPosition, controller._rotateMousePosition)) {
       if (controller._looking) {
-        controller.look3D(controller, startPosition, movement, up)
+        controller._look3D(controller, startPosition, movement, up)
       } else if (controller._rotating) {
-        controller.rotate3D(controller, startPosition, movement)
+        controller._rotate3D(controller, startPosition, movement)
       } else if (controller._strafing) {
-        controller.continueStrafing(controller, movement)
+        controller._continueStrafing(controller, movement)
       } else {
         if (
           Cartesian3.magnitude(camera.position) <
@@ -320,11 +501,11 @@ export default class ScreenSpaceCameraController {
         }
 
         magnitude = Cartesian3.magnitude(controller._rotateStartPosition)
-        radii = scratchDadii
+        radii = new Cartesian3()
         radii.x = radii.y = radii.z = magnitude
-        ellipsoid = Ellipsoid.fromCartesian3(radii, scratchEllipsoid)
+        ellipsoid = Ellipsoid.fromCartesian3(radii)
 
-        controller.pan3D(controller, startPosition, movement, ellipsoid)
+        controller._pan3D(controller, startPosition, movement, ellipsoid)
       }
 
       return
@@ -335,8 +516,7 @@ export default class ScreenSpaceCameraController {
     controller._strafing = false
 
     const height =
-      ellipsoid.cartesianToCartographic(camera.positionWC, scratchCartographic)
-        ?.height || 0
+      ellipsoid.cartesianToCartographic(camera.positionWC)?.height || 0
     const globe = controller._globe
 
     if (
@@ -344,10 +524,9 @@ export default class ScreenSpaceCameraController {
       defined(height) &&
       height < controller.minimumPickingTerrainHeight
     ) {
-      const mousePos = controller.pickPosition(
+      const mousePos = controller._pickPosition(
         controller,
-        movement.startPosition,
-        scratchMousePosition
+        movement.startPosition
       )
 
       if (defined(mousePos)) {
@@ -357,7 +536,7 @@ export default class ScreenSpaceCameraController {
           pickGlobeScrachRay
         )
         if (cameraUnderground) {
-          const strafing = false
+          strafing = false
           controller._getStrafeStartPositionUnderground(
             controller,
             ray,
@@ -391,9 +570,9 @@ export default class ScreenSpaceCameraController {
           )
         } else {
           magnitude = Cartesian3.magnitude(mousePos)
-          radii = scratchDadii
+          radii = new Cartesian3()
           radii.x = radii.y = radii.z = magnitude
-          ellipsoid = Ellipsoid.fromCartesian3(radii, scratchEllipsoid)
+          ellipsoid = Ellipsoid.fromCartesian3(radii)
 
           controller._pan3D(controller, startPosition, movement, ellipsoid)
 
@@ -419,7 +598,7 @@ export default class ScreenSpaceCameraController {
         controller._ellipsoid
       )
       Cartesian3.clone(spin3DPick, controller._rotateStartPosition)
-    } else if (height > controller._minimumTrackBallHeight) {
+    } else if (height > controller.minimumTrackBallHeight) {
       controller._rotating = true
       controller._rotate3D(controller, startPosition, movement)
     } else {
@@ -433,7 +612,7 @@ export default class ScreenSpaceCameraController {
   private _rotate3D(
     controller: ScreenSpaceCameraController,
     startPosition: Cartesian2,
-    movement: Movement,
+    movement: LastInertiaConstructor,
     constrainedAxis?: Cartesian3,
     rotateOnlyVertical?: boolean,
     rotateOnlyHorizontal?: boolean
@@ -480,13 +659,13 @@ export default class ScreenSpaceCameraController {
       camera.rotateUp(deltaTheta)
     }
 
-    camera.constranedAxis = oldAxis
+    camera.constrainedAxis = oldAxis
   }
 
   private _pan3D(
     controller: ScreenSpaceCameraController,
     startPosition: Cartesian2,
-    movement: Movement,
+    movement: LastInertiaConstructor,
     ellipsoid: Ellipsoid
   ) {
     const scene = controller._scene
@@ -501,10 +680,10 @@ export default class ScreenSpaceCameraController {
       pan3DEndMousePosition
     )
     const height =
-      ellipsoid.cartesianToCartographic(camera.position, scratchCartographic)
-        ?.height || 0.0
+      ellipsoid.cartesianToCartographic(camera.position)?.height || 0.0
 
-    let p0, p1
+    let p0: Cartesian3 | Cartesian4 | undefined,
+      p1: Cartesian3 | Cartesian4 | undefined
 
     if (
       !movement.inertiaEnabled &&
@@ -558,7 +737,7 @@ export default class ScreenSpaceCameraController {
         const endPickDirection = camera.getPickRay(
           endMousePosition,
           panRay
-        ).direction
+        )?.direction
         const endPickProj = Cartesian3.subtract(
           endPickDirection,
           Cartesian3.projectVector(
@@ -570,7 +749,7 @@ export default class ScreenSpaceCameraController {
         )
         const angle = Cartesian3.angleBetween(endPickProj, camera.directionWC)
         let forward = 1.0
-        if (defined(camera.frustum.fov)) {
+        if (defined((camera.frustum as PerspectiveFrustum).fov)) {
           forward = Math.max(Math.tan(angle), 0.1)
         }
 
@@ -603,8 +782,8 @@ export default class ScreenSpaceCameraController {
     }
 
     if (!defined(p0) || !defined(p1)) {
-      p0 = camera.pickEllipsoid(startMousePosition, ellipsoid, pan3DP0)
-      p1 = camera.pickEllipsoid(endMousePosition, ellipsoid, pan3DP1)
+      p0 = camera.pickEllipsoid(startMousePosition, ellipsoid)
+      p1 = camera.pickEllipsoid(endMousePosition, ellipsoid)
     }
 
     if (!defined(p0) || !defined(p1)) {
@@ -613,8 +792,8 @@ export default class ScreenSpaceCameraController {
       return
     }
 
-    p0 = camera.worldToCameraCoordinates(p0, p1)
-    p1 = camera.worldToCameraCoordinates(p1, p1)
+    p0 = camera.worldToCameraCoordinates(p0 as Cartesian4, p0 as Cartesian4)
+    p1 = camera.worldToCameraCoordinates(p1 as Cartesian4, p1 as Cartesian4)
 
     if (!defined(camera.constrainedAxis)) {
       Cartesian3.normalize(p0, p0)
@@ -630,7 +809,7 @@ export default class ScreenSpaceCameraController {
         camera.rotate(axis, angle)
       }
     } else {
-      const basis0 = camera.constainedAxis
+      const basis0 = camera.constrainedAxis
       const basis1 = Cartesian3.mostOrthogonalAxis(basis0, pan3DTemp0)
       Cartesian3.cross(basis1, basis0, basis1)
       Cartesian3.normalize(basis1, basis1)
@@ -702,13 +881,13 @@ export default class ScreenSpaceCameraController {
   private _zoom3D(
     controller: ScreenSpaceCameraController,
     startPosition: Cartesian2,
-    movement: Movement
+    movement: LastInertiaConstructor | PinchMovement
   ) {
-    if (defined(movement.distance)) {
-      movement = movement.distance
+    if (defined((movement as PinchMovement).distance)) {
+      movement = (movement as PinchMovement).distance
     }
 
-    const inertiaMovement = movement.inertiaEnabled
+    const inertiaMovement = (movement as LastInertiaConstructor).inertiaEnabled
 
     const ellipsoid = controller._ellipsoid
     const scene = controller._scene
@@ -722,8 +901,8 @@ export default class ScreenSpaceCameraController {
       windowPosition = startPosition
     } else {
       windowPosition = zoomCVWindowPos
-      windowPosition.x = startPosition.x
-      windowPosition.y = startPosition.y
+      windowPosition.x = canvas.clientWidth / 2
+      windowPosition.y = canvas.clientHeight / 2
     }
 
     const ray = camera.getPickRay(windowPosition, zoomCVWindowRay)!
@@ -742,11 +921,7 @@ export default class ScreenSpaceCameraController {
       : height < controller._minimumPickingTerrainHeight
 
     if (needPickGlobe) {
-      intersection = controller._pickPosition(
-        controller,
-        windowPosition,
-        zoomCVIntersection
-      )
+      intersection = controller._pickPosition(controller, windowPosition)
     }
 
     let distance
@@ -758,8 +933,7 @@ export default class ScreenSpaceCameraController {
     if (cameraUnderground) {
       const distanceUnderground = controller._getZoomDistanceUnderground(
         controller,
-        ray,
-        height
+        ray
       )
       if (defined(distance)) {
         distance = Math.min(distance, distanceUnderground)
@@ -776,21 +950,337 @@ export default class ScreenSpaceCameraController {
     controller._handleZoom(
       controller,
       startPosition,
-      movement,
+      movement as LastInertiaConstructor,
       controller._zoomFactor,
       distance,
       Cartesian3.dot(unitPosition, camera.direction)
     )
   }
 
+  private _handleZoom(
+    object: ScreenSpaceCameraController,
+    startPosition: Cartesian2,
+    movement: LastInertiaConstructor,
+    zoomFactor: number,
+    distanceMeasure: number,
+    unitPositionDotDirection: number
+  ) {
+    let percentage = 1.0
+    if (defined(unitPositionDotDirection)) {
+      percentage = HEditorMath.clamp(
+        Math.abs(unitPositionDotDirection),
+        0.25,
+        1.0
+      )
+    }
+
+    const diff = movement.endPosition.y - movement.startPosition.y
+    const approachingSurface = diff > 0
+    const minHeight = approachingSurface
+      ? object.minimumZoomDistance * percentage
+      : 0
+    const maxHeight = object.maximumZoomDistance
+
+    const minDistance = distanceMeasure - minHeight
+    let zoomRate = zoomFactor * minDistance
+    zoomRate = HEditorMath.clamp(
+      zoomRate,
+      object._minimumZoomRate,
+      object._maximumZoomRate
+    )
+
+    let rangeWindowRatio = diff / object._scene.canvas.clientHeight
+    rangeWindowRatio = Math.min(rangeWindowRatio, object.maximumMovementRatio)
+    let distance = zoomRate * rangeWindowRatio
+
+    if (
+      object.enableCollisionDetection ||
+      object.minimumZoomDistance === 0.0 ||
+      !defined(object._globe)
+    ) {
+      if (distance > 0.0 && Math.abs(distanceMeasure - minHeight) < 1.0) {
+        return
+      }
+      if (distance < 0.0 && Math.abs(distanceMeasure - maxHeight) < 1.0) {
+        return
+      }
+
+      if (distanceMeasure - distance < minHeight) {
+        distance = distanceMeasure - minHeight - 1.0
+      } else if (distanceMeasure - distance > maxHeight) {
+        distance = distanceMeasure - maxHeight
+      }
+    }
+
+    const scene = object._scene
+    const camera = scene.camera
+    const mode = scene.mode
+
+    const orientation = new HeadingPitchRoll()
+    orientation.heading = camera.heading
+    orientation.pitch = camera.pitch
+    orientation.roll = camera.roll
+
+    if (camera.frustum instanceof OrthographicFrustum) {
+      if (Math.abs(distance) > 0.0) {
+        camera.zoomIn(distance)
+        camera._adjustOrthographicFrustum(true)
+      }
+      return
+    }
+
+    const sameStartPosition = defaultValue(
+      movement.inertiaEnabled,
+      Cartesian2.equals(startPosition, object._zoomMouseStart)
+    )
+    let zoomingOnVector = object._zoomingOnVector
+    let rotatingZoom = object._rotatingZoom
+    let pickedPosition
+
+    if (!sameStartPosition) {
+      object._zoomMouseStart = Cartesian2.clone(
+        startPosition,
+        object._zoomMouseStart
+      )
+
+      if (defined(object._globe)) {
+        pickedPosition = object._pickPosition(object, startPosition)
+      }
+
+      if (defined(pickedPosition)) {
+        object._useZoomWorldPosition = true
+        object._zoomWorldPosition = Cartesian3.clone(
+          pickedPosition,
+          object._zoomWorldPosition
+        )
+      } else {
+        object._useZoomWorldPosition = false
+      }
+
+      zoomingOnVector = object._zoomingOnVector = false
+      rotatingZoom = object._rotatingZoom = false
+      object._zoomingUnderground = object._cameraUnderground
+    }
+
+    if (!object._useZoomWorldPosition) {
+      camera.zoomIn(distance)
+      return
+    }
+
+    let zoomOnVector = false
+
+    if (camera.positionCartographic.height < 2000000) {
+      rotatingZoom = true
+    }
+
+    if (!sameStartPosition || rotatingZoom) {
+      const cameraPositionNormal = Cartesian3.normalize(camera.position)
+      if (
+        object._cameraUnderground ||
+        object._zoomingUnderground ||
+        (camera.positionCartographic.height < 3000.0 &&
+          Math.abs(Cartesian3.dot(camera.direction, cameraPositionNormal)) <
+            0.6)
+      ) {
+        zoomOnVector = true
+      } else {
+        const canvas = scene.canvas
+
+        const centerPixel = new Cartesian2()
+        centerPixel.x = canvas.clientWidth / 2
+        centerPixel.y = canvas.clientHeight / 2
+        const centerPosition = object._pickPosition(object, centerPixel)
+
+        if (!defined(centerPosition)) {
+          zoomOnVector = true
+        } else if (camera.positionCartographic.height < 1000000.0) {
+          if (Cartesian3.dot(camera.direction, cameraPositionNormal) >= -0.5) {
+            zoomOnVector = true
+          } else {
+            const cameraPosition = new Cartesian3()
+            Cartesian3.clone(camera.position, cameraPosition)
+            const target = object._zoomWorldPosition
+
+            const targetNormal = Cartesian3.normalize(target)
+
+            if (Cartesian3.dot(targetNormal, cameraPositionNormal) < 0.0) {
+              return
+            }
+
+            const center = new Cartesian3()
+            const forward = new Cartesian3()
+
+            Cartesian3.clone(camera.direction, forward)
+            Cartesian3.add(
+              cameraPosition,
+              Cartesian3.multiplyByScalar(forward, 1000),
+              center
+            )
+
+            const positionToTarget = new Cartesian3()
+            const positionToTargetNormal = new Cartesian3()
+            Cartesian3.subtract(target, cameraPosition, positionToTarget)
+            Cartesian3.normalize(positionToTarget, positionToTargetNormal)
+
+            const alphaDot = Cartesian3.dot(
+              cameraPositionNormal,
+              positionToTargetNormal
+            )
+            if (alphaDot >= 0.0) {
+              object._zoomMouseStart.x = -1
+              return
+            }
+
+            const alpha = Math.acos(-alphaDot)
+            const cameraDistance = Cartesian3.magnitude(cameraPosition)
+            const targetDistance = Cartesian3.magnitude(target)
+            const remainingDistance = cameraDistance - distance
+            const positionToTargetDistance =
+              Cartesian3.magnitude(positionToTarget)
+
+            const gamma = Math.asin(
+              HEditorMath.clamp(
+                (positionToTargetDistance / targetDistance) * Math.sin(alpha),
+                -1.0,
+                1.0
+              )
+            )
+            const delta = Math.asin(
+              HEditorMath.clamp(
+                (remainingDistance / cameraDistance) * Math.sin(alpha),
+                -1.0,
+                1.0
+              )
+            )
+            const beta = gamma - delta + alpha
+
+            const up = new Cartesian3()
+            Cartesian3.normalize(cameraPosition, up)
+            let right = new Cartesian3()
+            right = Cartesian3.cross(positionToTargetNormal, up, right)
+            right = Cartesian3.normalize(right, right)
+
+            Cartesian3.normalize(Cartesian3.cross(up, right), forward)
+
+            Cartesian3.multiplyByScalar(
+              Cartesian3.normalize(center),
+              Cartesian3.magnitude(center) - distance,
+              center
+            )
+            Cartesian3.normalize(cameraPosition, cameraPosition)
+            Cartesian3.multiplyByScalar(
+              cameraPosition,
+              remainingDistance,
+              cameraPosition
+            )
+
+            const pMid = new Cartesian3()
+            Cartesian3.multiplyByScalar(
+              Cartesian3.add(
+                Cartesian3.multiplyByScalar(up, Math.cos(beta) - 1),
+                Cartesian3.multiplyByScalar(forward, Math.sin(beta))
+              ),
+              remainingDistance,
+              pMid
+            )
+            Cartesian3.add(cameraPosition, pMid, cameraPosition)
+
+            Cartesian3.normalize(center, up)
+            Cartesian3.normalize(Cartesian3.cross(up, right), forward)
+
+            const cMid = new Cartesian3()
+            Cartesian3.multiplyByScalar(
+              Cartesian3.add(
+                Cartesian3.multiplyByScalar(up, Math.cos(beta) - 1),
+                Cartesian3.multiplyByScalar(forward, Math.sin(beta))
+              ),
+              Cartesian3.magnitude(center),
+              cMid
+            )
+            Cartesian3.add(center, cMid, center)
+
+            Cartesian3.clone(cameraPosition, camera.position)
+
+            Cartesian3.normalize(
+              Cartesian3.subtract(center, cameraPosition),
+              camera.direction
+            )
+            Cartesian3.clone(camera.direction, camera.direction)
+
+            Cartesian3.cross(camera.direction, camera.up, camera.right)
+            Cartesian3.cross(camera.right, camera.direction, camera.up)
+
+            camera.setView({
+              orientation
+            })
+
+            return
+          }
+        } else {
+          const positionNormal = Cartesian3.normalize(centerPosition)
+          const pickedNormal = Cartesian3.normalize(object._zoomWorldPosition)
+          const dotProduct = Cartesian3.dot(pickedNormal, positionNormal)
+
+          if (dotProduct > 0.0 && dotProduct < 1.0) {
+            const angle = HEditorMath.acosClamped(dotProduct)
+            const axis = Cartesian3.cross(pickedNormal, positionNormal)
+            const denom =
+              Math.abs(angle) > HEditorMath.toRadians(20.0)
+                ? camera.positionCartographic.height * 0.75
+                : camera.positionCartographic.height - distance
+            const scalar = distance / denom
+            camera.rotate(axis, angle * scalar)
+          }
+        }
+      }
+      object._rotatingZoom = !zoomOnVector
+    }
+
+    if ((!sameStartPosition && zoomOnVector) || zoomingOnVector) {
+      let ray
+      const zoomMouseStart = SceneTransforms.worldToWindowCoordinates(
+        scene,
+        object._zoomWorldPosition
+      )
+      if (
+        mode !== SceneMode.COLUMBUS_VIEW &&
+        Cartesian2.equals(startPosition, object._zoomMouseStart) &&
+        defined(zoomMouseStart)
+      ) {
+        ray = camera.getPickRay(zoomMouseStart)
+      } else {
+        ray = camera.getPickRay(startPosition)
+      }
+
+      const rayDirection = ray.direction
+      if (mode === SceneMode.COLUMBUS_VIEW || mode === SceneMode.SCENE2D) {
+        Cartesian3.fromElements(
+          rayDirection.y,
+          rayDirection.z,
+          rayDirection.x,
+          rayDirection
+        )
+      }
+
+      camera.move(rayDirection, distance)
+      object._zoomingOnVector = true
+    } else {
+      camera.zoomIn(distance)
+    }
+
+    if (!object._cameraUnderground) {
+      camera.setView({
+        orientation
+      })
+    }
+  }
   private _tilt3D(
     controller: ScreenSpaceCameraController,
     startPosition: Cartesian2,
-    movement: PinchMovement | MovePositionEvent
+    movement: PinchMovement | LastInertiaConstructor
   ) {
     const scene = controller._scene
     const camera = scene.camera
-
     if (!Matrix4.equals(camera.transform, Matrix4.IDENTITY)) {
       return
     }
@@ -807,12 +1297,7 @@ export default class ScreenSpaceCameraController {
 
     if (controller._looking) {
       const up = controller._ellipsoid.geodeticSurfaceNormal(camera.position)
-      controller._look3D(
-        controller,
-        startPosition,
-        movement as MovePositionEvent,
-        up
-      )
+      controller._look3D(controller, startPosition, movement as Movement, up)
       return
     }
 
@@ -827,13 +1312,13 @@ export default class ScreenSpaceCameraController {
       controller._tilt3DOnEllipsoid(
         controller,
         startPosition,
-        movement as MovePositionEvent
+        movement as Movement
       )
     } else {
       controller._tilt3DOnTerrain(
         controller,
         startPosition,
-        movement as MovePositionEvent
+        movement as Movement
       )
     }
   }
@@ -841,7 +1326,7 @@ export default class ScreenSpaceCameraController {
   private _tilt3DOnEllipsoid(
     controller: ScreenSpaceCameraController,
     startPosition: Cartesian2,
-    movement: MovePositionEvent
+    movement: Movement
   ) {
     const ellipsoid = controller._ellipsoid
     const scene = controller._scene
@@ -975,7 +1460,7 @@ export default class ScreenSpaceCameraController {
 
     const mag = Cartesian3.magnitude(center)
     const radii = Cartesian3.fromElements(mag, mag, mag)
-    const newEllipsoid = Ellipsoid.fromCartesian3(radii, scratchEllipsoid)
+    const newEllipsoid = Ellipsoid.fromCartesian3(radii)
 
     intersection = IntersectionTests.rayEllipsoid(ray, newEllipsoid)
     if (!defined(intersection)) {
@@ -1031,79 +1516,93 @@ export default class ScreenSpaceCameraController {
       )
 
       camera.constrainedAxis = oldConstrainedAxis
+    } else {
+      controller._rotate3D(
+        controller,
+        startPosition,
+        movement,
+        constrainedAxis,
+        false,
+        true
+      )
+    }
 
-      if (defined(camera.constrainedAxis)) {
-        const right = Cartesian3.cross(camera.direction, camera.constrainedAxis)
-        if (
-          !Cartesian3.equalsEpsilon(
-            right,
-            Cartesian3.ZERO,
-            HEditorMath.EPSILON6
-          )
-        ) {
-          if (Cartesian3.dot(right, camera.right) < 0.0) {
-            Cartesian3.negate(right, right)
-          }
-          Cartesian3.cross(right, camera.direction, camera.up)
-          Cartesian3.cross(camera.direction, camera.up, camera.right)
-
-          Cartesian3.normalize(camera.right, camera.right)
-          Cartesian3.normalize(camera.up, camera.up)
+    camera.setTransform(transform)
+    controller._rotate3D(
+      controller,
+      startPosition,
+      movement,
+      constrainedAxis,
+      false,
+      true
+    )
+    if (defined(camera.constrainedAxis)) {
+      const right = Cartesian3.cross(camera.direction, camera.constrainedAxis)
+      if (
+        !Cartesian3.equalsEpsilon(right, Cartesian3.ZERO, HEditorMath.EPSILON6)
+      ) {
+        if (Cartesian3.dot(right, camera.right) < 0.0) {
+          Cartesian3.negate(right, right)
         }
+        Cartesian3.cross(right, camera.direction, camera.up)
+        Cartesian3.cross(camera.direction, camera.up, camera.right)
+
+        Cartesian3.normalize(camera.right, camera.right)
+        Cartesian3.normalize(camera.up, camera.up)
       }
+    }
+
+    camera.setTransform(oldTransform)
+    controller._globe = oldGlobe
+    controller._ellipsoid = oldEllipsoid
+
+    const radius = oldEllipsoid.maximumRadius
+    controller._rotateFactor = 1.0 / radius
+    controller._rotateRateRangeAdjustment = radius
+
+    const originalPosition = Cartesian3.clone(camera.positionWC)
+
+    if (controller.enableCollisionDetection) {
+      controller._adjustHeightForTerrain(controller, true)
+    }
+
+    if (!Cartesian3.equals(camera.positionWC, originalPosition)) {
+      camera.setTransform(verticalTransform)
+      camera.worldToCameraCoordinatesPoint(originalPosition, originalPosition)
+
+      const magSqrd = Cartesian3.magnitudeSquared(originalPosition)
+      if (Cartesian3.magnitudeSquared(camera.position) < magSqrd) {
+        Cartesian3.normalize(camera.position, camera.position)
+        Cartesian3.multiplyByScalar(
+          camera.position,
+          Math.sqrt(magSqrd),
+          camera.position
+        )
+      }
+
+      const angle = Cartesian3.angleBetween(originalPosition, camera.position)
+      const axis = Cartesian3.cross(
+        originalPosition,
+        camera.position,
+        originalPosition
+      )
+      Cartesian3.normalize(axis, axis)
+
+      const quaternion = Quaternion.fromAxisAngle(axis, angle)
+      const ratation = Matrix3.fromQuaternion(quaternion)
+      Matrix3.multiplyByVector(ratation, camera.direction, camera.direction)
+      Matrix3.multiplyByVector(ratation, camera.up, camera.up)
+      Cartesian3.cross(camera.direction, camera.up, camera.right)
+      Cartesian3.cross(camera.right, camera.direction, camera.up)
 
       camera.setTransform(oldTransform)
-      controller._globe = oldGlobe
-      controller._ellipsoid = oldEllipsoid
-
-      const radius = oldEllipsoid.maximumRadius
-      controller._rotateFactor = 1.0 / radius
-      controller._rotateRateRangeAdjustment = radius
-
-      const originalPosition = Cartesian3.clone(camera.positionWC)
-
-      if (controller.enableCollisionDetection) {
-        controller._adjustHeightForTerrain(controller, true)
-      }
-
-      if (!Cartesian3.equals(camera.positionWC, originalPosition)) {
-        camera.setTransform(verticalTransform)
-        camera.worldToCameraCoordinatesPoint(originalPosition, originalPosition)
-
-        const magSqrd = Cartesian3.magnitudeSquared(originalPosition)
-        if (Cartesian3.magnitudeSquared(camera.position) < magSqrd) {
-          Cartesian3.normalize(camera.position, camera.position)
-          Cartesian3.multiplyByScalar(
-            camera.position,
-            Math.sqrt(magSqrd),
-            camera.position
-          )
-        }
-
-        const angle = Cartesian3.angleBetween(originalPosition, camera.position)
-        const axis = Cartesian3.cross(
-          originalPosition,
-          camera.position,
-          originalPosition
-        )
-        Cartesian3.normalize(axis, axis)
-
-        const quaternion = Quaternion.fromAxisAngle(axis, angle)
-        const ratation = Matrix3.fromQuaternion(quaternion)
-        Matrix3.multiplyByVector(ratation, camera.direction, camera.direction)
-        Matrix3.multiplyByVector(ratation, camera.up, camera.up)
-        Cartesian3.cross(camera.direction, camera.up, camera.right)
-        Cartesian3.cross(camera.right, camera.direction, camera.up)
-
-        camera.setTransform(oldTransform)
-      }
     }
   }
 
   private _look3D(
     controller: ScreenSpaceCameraController,
     startPosition: Cartesian2,
-    movement: MovePositionEvent,
+    movement: Movement | LastInertiaConstructor,
     rotationAxis: Cartesian3
   ) {
     const scene = controller._scene
@@ -1225,5 +1724,183 @@ export default class ScreenSpaceCameraController {
     } else {
       camera.lookUp(angle)
     }
+  }
+
+  private _adjustHeightForTerrain(
+    controller: ScreenSpaceCameraController,
+    cameraChanged: boolean
+  ) {
+    controller._adjustedHeightForTerrain = true
+
+    const scene = controller._scene
+    const camera = scene.camera
+
+    const ellipsoid = defaultValue(scene.ellipsoid, Ellipsoid.WGS84)
+
+    let transform, mag
+
+    if (!Matrix4.equals(Matrix4.IDENTITY, camera.transform)) {
+      transform = Matrix4.clone(camera.transform)
+      mag = Cartesian3.magnitude(camera.position)
+      camera.setTransform(Matrix4.IDENTITY)
+    }
+
+    const cartographic = ellipsoid.cartesianToCartographic(camera.position)
+
+    let heightUpdated = false
+    if (cartographic.height < controller._minimumCollisionTerrainHeight) {
+      const globeHeight = controller._scene.globeHeight
+      if (defined(globeHeight)) {
+        const height = globeHeight + controller.minimumZoomDistance
+        const difference = globeHeight - controller._lastGlobeHeight
+        const percentDifference = difference / controller._lastGlobeHeight
+
+        if (
+          cartographic.height < height &&
+          (cameraChanged || Math.abs(percentDifference) <= 0.1)
+        ) {
+          cartographic.height = height
+          ellipsoid.cartographicToCartesian(cartographic, camera.position)
+
+          heightUpdated = true
+        }
+
+        if (cameraChanged || Math.abs(percentDifference) <= 0.1) {
+          controller._lastGlobeHeight = globeHeight
+        } else {
+          controller._lastGlobeHeight += difference * 0.1
+        }
+      }
+    }
+
+    if (defined(transform)) {
+      camera.setTransform(transform)
+      if (heightUpdated && mag) {
+        Cartesian3.normalize(camera.position, camera.position)
+        Cartesian3.negate(camera.position, camera.direction)
+        Cartesian3.multiplyByScalar(
+          camera.direction,
+          Math.max(mag, controller.minimumZoomDistance),
+          camera.position
+        )
+        Cartesian3.normalize(camera.direction, camera.direction)
+        Cartesian3.cross(camera.direction, camera.up, camera.right)
+        Cartesian3.cross(camera.right, camera.direction, camera.up)
+      }
+    }
+  }
+
+  private _pickPosition(
+    controller: ScreenSpaceCameraController,
+    mousePosition: Cartesian2,
+    result?: Cartesian3
+  ) {
+    const scene = controller._scene
+    const globe = controller._globe
+    const camera = scene.camera
+
+    let depthIntersection
+    if (scene.pickPositionSupported) {
+      depthIntersection = scene.pickPositionWorldCoordinates(
+        mousePosition,
+        result
+      )
+    }
+
+    if (!defined(globe) && defined(depthIntersection)) {
+      return Cartesian3.clone(depthIntersection, result)
+    }
+
+    const cullBackFaces = !controller._cameraUnderground
+    const ray = camera.getPickRay(mousePosition)
+    const rayIntersection = globe!.pickWorldCoordinates(
+      ray,
+      scene,
+      cullBackFaces
+    )
+
+    const pickDistance = defined(depthIntersection)
+      ? Cartesian3.distance(depthIntersection, camera.positionWC)
+      : Number.POSITIVE_INFINITY
+    const rayDistance = defined(rayIntersection)
+      ? Cartesian3.distance(rayIntersection, camera.positionWC)
+      : Number.POSITIVE_INFINITY
+
+    if (pickDistance < rayDistance && depthIntersection) {
+      return Cartesian3.clone(depthIntersection, result)
+    }
+
+    return Cartesian3.clone(rayIntersection, result)
+  }
+
+  private _getZoomDistanceUnderground(
+    controller: ScreenSpaceCameraController,
+    ray: Ray
+  ) {
+    const origin = ray.origin
+    const direction = ray.direction
+    const distanceFromSurface = controller._getDistanceFromSurface(controller)
+
+    const surfaceNormal = Cartesian3.normalize(origin)
+    let strength = Math.abs(Cartesian3.dot(surfaceNormal, direction))
+    strength = Math.max(strength, 0.5) * 2.0
+    return distanceFromSurface * strength
+  }
+  private _getDistanceFromSurface(controller: ScreenSpaceCameraController) {
+    const ellipsoid = controller._ellipsoid
+    const scene = controller._scene
+    const camera = scene.camera
+
+    let height = 0.0
+
+    const cartographic = ellipsoid.cartesianToCartographic(camera.position)
+    if (defined(cartographic)) {
+      height = cartographic.height
+    }
+
+    const globeHeight = defaultValue(controller._scene.globeHeight, 0.0)
+    const distanceFromSurface = Math.abs(globeHeight - height)
+
+    return distanceFromSurface
+  }
+  private _getTiltCenterUnderground(
+    controller: ScreenSpaceCameraController,
+    ray: Ray,
+    pickedPosition: Cartesian3,
+    result?: Cartesian3
+  ) {
+    let distance = Cartesian3.distance(ray.origin, pickedPosition)
+    const distanceFromSurface = controller._getDistanceFromSurface(controller)
+
+    const maximumDistance = HEditorMath.clamp(
+      distanceFromSurface * 5.0,
+      controller._minimumUndergroundPickDistance,
+      controller._maximumUndergroundPickDistance
+    )
+
+    if (distance > maximumDistance) {
+      distance = Math.min(distance, distanceFromSurface / 5.0)
+      distance = Math.max(distance, 100.0)
+    }
+
+    return Ray.getPoint(ray, distance, result)
+  }
+  private _getStrafeStartPositionUnderground(
+    controller: ScreenSpaceCameraController,
+    ray: Ray,
+    pickedPosition: Cartesian3,
+    result?: Cartesian3
+  ) {
+    let distance
+    if (!defined(distance)) {
+      distance = controller._getDistanceFromSurface(controller)
+    } else {
+      distance = Cartesian3.distance(ray.origin, pickedPosition)
+      if (distance > controller._maximumUndergroundPickDistance) {
+        distance = controller._getDistanceFromSurface(controller)
+      }
+    }
+
+    return Ray.getPoint(ray, distance, result)
   }
 }

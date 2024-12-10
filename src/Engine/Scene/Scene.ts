@@ -1,4 +1,6 @@
 import { ComponentDatatype, PrimitiveType, SceneOptions } from '../../type'
+import Cartesian2 from '../Core/Cartesian2'
+import Cartesian3 from '../Core/Cartesian3'
 import defaultValue from '../Core/DefaultValue'
 import Ellipsoid from '../Core/Ellipsoid'
 import GeographicProjection from '../Core/GeographicProjection'
@@ -7,10 +9,13 @@ import Camera from './Camera'
 import FrameState from './FrameState'
 import Geometry from './Geometry'
 import GeometryAttribute from './GeometryAttribute'
+import Globe from './Globe'
+import ScreenSpaceCameraController from './ScreenSpaceCameraController'
 
 export default class Scene {
   canvas: HTMLCanvasElement
   isUseGPU: boolean
+  globe: Globe
 
   private _context: Context
   private _frameState: FrameState
@@ -18,7 +23,12 @@ export default class Scene {
 
   camera: Camera
   private _mapProjection: GeographicProjection
+  private _globeHeight: undefined | number
+  private _screenSpaceCameraController: ScreenSpaceCameraController
 
+  get screenSpaceCameraController() {
+    return this._screenSpaceCameraController
+  }
   get mapProjection() {
     return this._mapProjection
   }
@@ -31,6 +41,25 @@ export default class Scene {
 
   get drawingBufferHeight() {
     return this._context.gl.drawingBufferHeight
+  }
+  get pixelRatio() {
+    return this._frameState.pixelRatio
+  }
+  set pixelRatio(value: number) {
+    this._frameState.pixelRatio = value
+  }
+
+  get pickPositionSupported() {
+    return this._context.depthTexture
+  }
+  get globeHeight() {
+    return this._globeHeight
+  }
+  get frameState() {
+    return this._frameState
+  }
+  get mode() {
+    return this._frameState.mode
   }
 
   constructor(options: SceneOptions) {
@@ -54,9 +83,17 @@ export default class Scene {
       new GeographicProjection(this._ellipsoid)
     )
 
-    console.log(this._frameState, 'frameState')
-
     this.camera = new Camera(this)
+    this.globe = new Globe(this._ellipsoid)
+
+    this._screenSpaceCameraController = new ScreenSpaceCameraController(this)
+  }
+
+  public pickPositionWorldCoordinates(
+    windowPosition: Cartesian2,
+    result: Cartesian3 = new Cartesian3()
+  ) {
+    return result
   }
 
   draw() {

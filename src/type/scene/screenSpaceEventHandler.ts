@@ -1,5 +1,11 @@
 import Cartesian2 from '../../Engine/Core/Cartesian2'
 
+export interface LastInertiaConstructor {
+  startPosition: Cartesian2
+  endPosition: Cartesian2
+  motion?: Cartesian2
+  inertiaEnabled?: boolean
+}
 export interface SinglePositionEvent {
   position: Cartesian2
 }
@@ -12,10 +18,7 @@ export interface MovePositionEvent {
   endPosition: Cartesian2
 }
 export interface PinchMovement {
-  distance: {
-    startPosition: Cartesian2
-    endPosition: Cartesian2
-  }
+  distance: LastInertiaConstructor
   angleAndHeight: {
     startPosition: Cartesian2
     endPosition: Cartesian2
@@ -27,6 +30,8 @@ export interface Movement {
   endPosition: Cartesian2
   valid?: boolean
 }
+
+export type MovementType = Movement | PinchMovement
 export type WheelEventFunction = <T extends number>(delta: T) => void
 export type MouseDownEventFunction = <T extends SinglePositionEvent>(
   event: T

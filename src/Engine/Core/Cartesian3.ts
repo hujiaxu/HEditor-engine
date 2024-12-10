@@ -77,6 +77,11 @@ export default class Cartesian3 {
     index: number,
     result?: Cartesian3
   ) => Cartesian3
+  static projectVector: (
+    cartesian: Cartesian3,
+    direction: Cartesian3,
+    result?: Cartesian3
+  ) => Cartesian3
   constructor(x?: number, y?: number, z?: number) {
     this.x = x || 0
     this.y = y || 0
@@ -347,4 +352,13 @@ Cartesian3.unpack = function (
   result.y = array[index + 1]
   result.z = array[index + 2]
   return result
+}
+Cartesian3.projectVector = function (
+  cartesian: Cartesian3,
+  direction: Cartesian3,
+  result?: Cartesian3
+) {
+  const scalar =
+    Cartesian3.dot(cartesian, direction) / Cartesian3.dot(direction, direction)
+  return Cartesian3.multiplyByScalar(direction, scalar, result)
 }

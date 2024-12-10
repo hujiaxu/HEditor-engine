@@ -14,7 +14,23 @@ import Cartesian4 from '../Core/Cartesian4'
 import defaultValue from '../Core/DefaultValue'
 import Quaternion from '../Core/Quaternion'
 import Matrix3 from '../Core/Matrix3'
+import Ellipsoid from '../Core/Ellipsoid'
+import IntersectionTests from '../Core/IntersectionTests'
+import {
+  CameraViewOptions,
+  OrientationDirectionType,
+  SceneMode
+} from '../../type'
+import HeadingPitchRoll from '../Core/HeadingPitchRoll'
+import Rectangle from '../Core/Rectangle'
+import Transforms from '../Core/Transforms'
+import EllipsoidGeodesic from '../Core/EllipsoidGeodesic'
 
+const defaultRF = {
+  direction: new Cartesian3(),
+  right: new Cartesian3(),
+  up: new Cartesian3()
+}
 export default class Camera {
   public position: Cartesian3 = new Cartesian3(50, 50, 50)
   public direction: Cartesian3 = new Cartesian3(0.0, -1.0, 1.0)
@@ -41,12 +57,16 @@ export default class Camera {
   private _transformChanged = false
   private _modeChanged = false
   private _defaultLookAmount: number = Math.PI / 60.0
+  private _defaultRotateAmount: number = Math.PI / 3600.0
+  private _defaultZoomAmount: number = 100000.0
 
   private _viewMatrix: Matrix4 = new Matrix4()
 
   scene: Scene
   private _projection: GeographicProjection
-  private _positionCartographic: Cartographic | undefined
+  private _positionCartographic: Cartographic
+  private _maxCoord: Cartesian3
+  private _mode: SceneMode
 
   get viewMatrix() {
     this.updateViewMatrix(this)
@@ -54,6 +74,10 @@ export default class Camera {
   }
   get transform() {
     return this._transform
+  }
+  get positionCartographic() {
+    this._updateMembers()
+    return this._positionCartographic
   }
 
   frustum: PerspectiveFrustum | OrthographicFrustum
@@ -75,6 +99,12 @@ export default class Camera {
 
     const projection = scene.mapProjection
     this._projection = projection
+
+    this._maxCoord = projection.project(
+      new Cartographic(Math.PI, HEditorMath.PI_OVER_TWO)
+    )
+    this._positionCartographic = new Cartographic()
+    this._mode = SceneMode.SCENE3D
   }
 
   private _updateMembers() {
@@ -182,6 +212,24 @@ export default class Camera {
       this.updateViewMatrix(this)
     }
   }
+  private _calculateOrthographicFrustumWidth() {
+    if (!Matrix4.equals(Matrix4.IDENTITY, this.transform)) {
+      return Cartesian3.magnitude(this.position)
+    }
+
+    const scene = this.scene
+    const globe = scene.globe
+  }
+  _adjustOrthographicFrustum(zooming: boolean) {
+    if (!(this.frustum instanceof OrthographicFrustum)) return
+
+    if (!zooming && this._positionCartographic.height < 150000.0) {
+      return
+    }
+
+    this.frustum.width =
+      this._calculateOrthographicFrustumWidth() || this.frustum.width
+  }
   public updateViewMatrix(camera: Camera) {
     this._viewMatrix = Matrix4.computeView(
       camera.position,
@@ -202,7 +250,7 @@ export default class Camera {
 
     const canvas = this.scene.canvas
     if (canvas.clientWidth <= 0 || canvas.clientHeight <= 0) {
-      return undefined
+      return new Ray()
     }
 
     const frustum = this.frustum
@@ -319,6 +367,18 @@ export default class Camera {
     this._updateMembers()
   }
 
+  public worldToCameraCoordinates(cartesian: Cartesian4, result?: Cartesian4) {
+    if (!defined(cartesian)) {
+      throw new Error('cartesian is required.')
+    }
+    if (!defined(result)) {
+      result = new Cartesian4()
+    }
+
+    this._updateMembers()
+
+    return Matrix4.multiplyByVector(this._actualInvTransform, cartesian, result)
+  }
   public worldToCameraCoordinatesPoint(
     cartesian: Cartesian3,
     result?: Cartesian3
@@ -399,7 +459,363 @@ export default class Camera {
     )
   }
 
-  public look(axis: Cartesian3, angle: number) {
+  private _pickEllipsoid3D(
+    windowPosition: Cartesian2,
+    ellipsoid: Ellipsoid,
+    result?: Cartesian3
+  ) {
+    ellipsoid = defaultValue(ellipsoid, Ellipsoid.default)
+    const ray = this.getPickRay(windowPosition)
+    const intersection = IntersectionTests.rayEllipsoid(ray, ellipsoid)
+    if (!defined(intersection)) {
+      return undefined
+    }
+
+    const t = intersection.start > 0.0 ? intersection.start : intersection.stop
+
+    return Ray.getPoint(ray, t, result)
+  }
+  public pickEllipsoid(
+    windowPosition: Cartesian2,
+    ellipsoid: Ellipsoid,
+    result?: Cartesian3
+  ) {
+    if (!defined(windowPosition)) {
+      throw new Error('windowPosition is required.')
+    }
+
+    const canvas = this.scene.canvas
+    if (canvas.clientWidth <= 0 || canvas.clientHeight <= 0) {
+      return undefined
+    }
+
+    ellipsoid = defaultValue(ellipsoid, Ellipsoid.default)
+
+    result = this._pickEllipsoid3D(windowPosition, ellipsoid, result)
+
+    return result
+  }
+  public setView(options: CameraViewOptions) {
+    let orientation = defaultValue(options.orientation, new HeadingPitchRoll())
+
+    const mode = this._mode
+
+    if (mode === SceneMode.MORPHING) {
+      return
+    }
+
+    if (defined(options.endTransform)) {
+      this.setTransform(options.endTransform)
+    }
+
+    let convert = defaultValue(options.convert, true)
+    let destination = defaultValue(
+      options.destination,
+      Cartesian3.clone(this.positionWC)
+    )
+    if (defined(destination) && defined((destination as Rectangle).west)) {
+      destination = this.getRectangleCameraCoordinates(
+        destination as Rectangle
+      ) as Cartesian3
+
+      if (isNaN(destination.x) || isNaN(destination.y)) {
+        throw new Error('destination has a NaN component.')
+      }
+      convert = false
+    }
+
+    if (defined((orientation as OrientationDirectionType).direction)) {
+      orientation = this._directionUpToHeadingPitchRoll(
+        destination as Cartesian3,
+        orientation as OrientationDirectionType
+      ) as HeadingPitchRoll
+    }
+
+    const scratchHpr = new HeadingPitchRoll()
+    scratchHpr.heading = defaultValue(orientation.heading, 0.0)
+    scratchHpr.pitch = defaultValue(orientation.pitch, -HEditorMath.PI_OVER_TWO)
+    scratchHpr.roll = defaultValue(orientation.roll, 0.0)
+
+    if (mode === SceneMode.SCENE3D) {
+      this.setView3D(destination, scratchHpr)
+    }
+  }
+
+  public getRectangleCameraCoordinates(
+    rectangle: Rectangle,
+    result: Cartesian3 = new Cartesian3()
+  ) {
+    if (!defined(rectangle)) {
+      throw new Error('rectangle is required.')
+    }
+
+    const mode = this._mode
+
+    if (mode === SceneMode.SCENE3D) {
+      return this._rectangleCameraPosition3D(rectangle, result)
+    }
+  }
+  private _rectangleCameraPosition3D(
+    rectangle: Rectangle,
+    result: Cartesian3 = new Cartesian3(),
+    updateCamera: boolean = false
+  ) {
+    const ellipsoid = this._projection.ellipsoid
+    const cameraRF = updateCamera ? this : defaultRF
+
+    const north = rectangle.north
+    const south = rectangle.south
+    let east = rectangle.east
+    const west = rectangle.west
+
+    if (west > east) {
+      east += HEditorMath.TWO_PI
+    }
+
+    const longitude = (west + east) * 0.5
+    let latitude
+    if (
+      south < -HEditorMath.PI_OVER_TWO + HEditorMath.RADIANS_PER_DEGREE &&
+      north > HEditorMath.PI_OVER_TWO - HEditorMath.RADIANS_PER_DEGREE
+    ) {
+      latitude = 0.0
+    } else {
+      const northCartographic = new Cartographic()
+      northCartographic.longitude = longitude
+      northCartographic.latitude = north
+      northCartographic.height = 0.0
+
+      const southCartographic = new Cartographic()
+      southCartographic.longitude = longitude
+      southCartographic.latitude = south
+      southCartographic.height = 0.0
+
+      let ellipsoidGeodesic: EllipsoidGeodesic | undefined
+      if (
+        !defined(ellipsoidGeodesic) ||
+        ellipsoidGeodesic.ellipsoid !== ellipsoid
+      ) {
+        ellipsoidGeodesic = new EllipsoidGeodesic(
+          undefined,
+          undefined,
+          ellipsoid
+        )
+      }
+
+      ellipsoidGeodesic.setEndPoints(northCartographic, southCartographic)
+      latitude = ellipsoidGeodesic.interpolateUsingFraction(0.5).latitude
+    }
+
+    const centerCartographic = new Cartographic()
+    centerCartographic.longitude = longitude
+    centerCartographic.latitude = latitude
+    centerCartographic.height = 0.0
+
+    const center = ellipsoid.cartographicToCartesian(centerCartographic)
+
+    // 计算角点: 计算矩形四个角(东北, 北西, 南东, 南西)的笛卡尔坐标
+    const cart = new Cartographic()
+    cart.longitude = east
+    cart.latitude = north
+    const northEast = ellipsoid.cartographicToCartesian(cart)
+
+    cart.longitude = west
+    const northWest = ellipsoid.cartographicToCartesian(cart)
+
+    cart.latitude = longitude
+    const northCenter = ellipsoid.cartographicToCartesian(cart)
+
+    cart.longitude = south
+    const southCenter = ellipsoid.cartographicToCartesian(cart)
+
+    cart.longitude = east
+    const southEast = ellipsoid.cartographicToCartesian(cart)
+
+    cart.longitude = west
+    const southWest = ellipsoid.cartographicToCartesian(cart)
+
+    Cartesian3.subtract(northWest, center, northWest)
+    Cartesian3.subtract(southEast, center, southEast)
+    Cartesian3.subtract(northEast, center, northEast)
+    Cartesian3.subtract(southWest, center, southWest)
+    Cartesian3.subtract(northCenter, center, northCenter)
+    Cartesian3.subtract(southCenter, center, southCenter)
+
+    const direction = ellipsoid.geodeticSurfaceNormal(
+      center,
+      cameraRF.direction
+    )
+    Cartesian3.negate(direction, direction)
+    const right = Cartesian3.cross(direction, Cartesian3.UNIT_Z, cameraRF.right)
+    Cartesian3.normalize(right, right)
+    const up = Cartesian3.cross(right, direction, cameraRF.up)
+
+    let d
+    if (this.frustum instanceof OrthographicFrustum) {
+      const width = Math.max(
+        Cartesian3.distance(northWest, southEast),
+        Cartesian3.distance(southEast, southWest)
+      )
+      const height = Math.max(
+        Cartesian3.distance(northEast, southEast),
+        Cartesian3.distance(northWest, northWest)
+      )
+
+      let rightScalar, topScalar
+      const offCenterFrustum = this.frustum.offCenterFrustum
+      const ratio = offCenterFrustum.right / offCenterFrustum.top
+      const heightRatio = height * ratio
+      if (width > heightRatio) {
+        rightScalar = width
+        topScalar = rightScalar / ratio
+      } else {
+        topScalar = height
+        rightScalar = heightRatio
+      }
+
+      d = Math.max(rightScalar, topScalar)
+    } else {
+      const tanPhi = Math.tan(this.frustum.fovy * 0.5)
+      const tanTheta = this.frustum.aspectRatio * tanPhi
+
+      d = Math.max(
+        this._computeD(direction, up, northWest, tanPhi),
+        this._computeD(direction, up, southEast, tanPhi),
+        this._computeD(direction, up, northEast, tanPhi),
+        this._computeD(direction, up, southWest, tanPhi),
+        this._computeD(direction, up, northCenter, tanPhi),
+        this._computeD(direction, up, southCenter, tanPhi),
+        this._computeD(direction, right, northWest, tanTheta),
+        this._computeD(direction, right, southEast, tanTheta),
+        this._computeD(direction, right, northEast, tanTheta),
+        this._computeD(direction, right, southWest, tanTheta),
+        this._computeD(direction, right, northCenter, tanTheta),
+        this._computeD(direction, right, southCenter, tanTheta)
+      )
+
+      if (south < 0 && north > 0) {
+        const equatorCartographic = new Cartographic()
+        equatorCartographic.longitude = west
+        equatorCartographic.latitude = 0.0
+        equatorCartographic.height = 0.0
+        let equatorPosition =
+          ellipsoid.cartographicToCartesian(equatorCartographic)
+        Cartesian3.subtract(equatorPosition, center, equatorPosition)
+        d = Math.max(
+          d,
+          this._computeD(direction, up, equatorPosition, tanPhi),
+          this._computeD(direction, right, equatorPosition, tanTheta)
+        )
+
+        equatorCartographic.longitude = east
+        equatorPosition = ellipsoid.cartographicToCartesian(equatorCartographic)
+        Cartesian3.subtract(equatorPosition, center, equatorPosition)
+        d = Math.max(
+          d,
+          this._computeD(direction, up, equatorPosition, tanPhi),
+          this._computeD(direction, right, equatorPosition, tanTheta)
+        )
+      }
+    }
+
+    return Cartesian3.add(
+      center,
+      Cartesian3.multiplyByScalar(direction, -d),
+      result
+    )
+  }
+
+  private _computeD(
+    direction: Cartesian3,
+    upOrRight: Cartesian3,
+    corner: Cartesian3,
+    tanThetaOrPhi: number
+  ) {
+    const opposite = Math.abs(Cartesian3.dot(upOrRight, corner))
+    return opposite / tanThetaOrPhi - Cartesian3.dot(direction, corner)
+  }
+  private _directionUpToHeadingPitchRoll(
+    position: Cartesian3,
+    orientation: OrientationDirectionType,
+    result: HeadingPitchRoll = new HeadingPitchRoll()
+  ) {
+    const direction = Cartesian3.clone(orientation.direction)
+    const up = Cartesian3.clone(orientation.up)
+
+    if (this._mode === SceneMode.SCENE3D) {
+      const ellipsoid = this.scene.ellipsoid
+      const transform = Transforms.eastNorthUpToFixedFrame(position, ellipsoid)
+      const invTransform = Matrix4.inverseTransformation(transform)
+
+      Matrix4.multiplyByPointAsVector(invTransform, direction, direction)
+      Matrix4.multiplyByPointAsVector(invTransform, up, up)
+    }
+
+    const right = Cartesian3.cross(direction, up)
+
+    result.heading = this._getHeading(direction, up)
+    result.pitch = this._getPitch(direction)
+    result.roll = this._getRoll(direction, up, right)
+    return result
+  }
+
+  private _getHeading(direction: Cartesian3, up: Cartesian3) {
+    let heading
+
+    if (
+      !HEditorMath.equalsEpsilon(
+        Math.abs(direction.z),
+        1.0,
+        HEditorMath.EPSILON3
+      )
+    ) {
+      heading = Math.atan2(direction.y, direction.x) - HEditorMath.PI_OVER_TWO
+    } else {
+      heading = Math.atan2(up.y, up.x) - HEditorMath.PI_OVER_TWO
+    }
+
+    return HEditorMath.TWO_PI - HEditorMath.zeroToTwoPi(heading)
+  }
+  private _getPitch(direction: Cartesian3) {
+    return HEditorMath.PI_OVER_TWO - HEditorMath.acosClamped(direction.z)
+  }
+  private _getRoll(direction: Cartesian3, up: Cartesian3, right: Cartesian3) {
+    let roll = 0.0
+    if (
+      !HEditorMath.equalsEpsilon(
+        Math.abs(direction.z),
+        1.0,
+        HEditorMath.EPSILON3
+      )
+    ) {
+      roll = Math.atan2(-right.z, up.z)
+      roll = HEditorMath.zeroToTwoPi(roll + HEditorMath.TWO_PI)
+    }
+
+    return roll
+  }
+  private _clampMove2D(position: Cartesian3) {
+    const maxProjectedX = this._maxCoord.x
+    const maxProjectedY = this._maxCoord.y
+
+    const maxX = position.x - maxProjectedX * 2.0
+    const minX = position.x + maxProjectedX * 2.0
+
+    if (position.x > maxProjectedX) {
+      position.x = maxX
+    }
+    if (position.x < -maxProjectedX) {
+      position.x = minX
+    }
+    if (position.y > maxProjectedY) {
+      position.y = maxProjectedY
+    }
+    if (position.y < -maxProjectedY) {
+      position.y = -maxProjectedY
+    }
+  }
+
+  public look(axis: Cartesian3, angle?: number) {
     if (!defined(axis)) {
       throw new Error('axis is required.')
     }
@@ -415,5 +831,143 @@ export default class Camera {
     Matrix3.multiplyByVector(rotation, direction, direction)
     Matrix3.multiplyByVector(rotation, up, up)
     Matrix3.multiplyByVector(rotation, right, right)
+  }
+
+  public lookDown(amount?: number) {
+    amount = defaultValue(amount, this._defaultLookAmount)
+    this.look(this.right, amount)
+  }
+  public lookUp(amount?: number) {
+    amount = defaultValue(amount, this._defaultLookAmount)
+    this.look(this.right, -amount)
+  }
+  public lookRight(amount?: number) {
+    amount = defaultValue(amount, this._defaultLookAmount)
+    this.look(this.up, amount)
+  }
+  public lookLeft(amount?: number) {
+    amount = defaultValue(amount, this._defaultLookAmount)
+    this.look(this.up, -amount)
+  }
+
+  public move(direction: Cartesian3, amount: number) {
+    if (!defined(direction)) {
+      throw new Error('direction is required.')
+    }
+
+    const cameraPosition = this.position
+    const moveScratch = Cartesian3.multiplyByScalar(direction, amount)
+
+    Cartesian3.add(cameraPosition, moveScratch, cameraPosition)
+
+    this._clampMove2D(cameraPosition)
+    this._adjustOrthographicFrustum(true)
+  }
+
+  private _rotateVertical(angle: number) {
+    const position = this.position
+
+    if (
+      defined(this.constrainedAxis) &&
+      !Cartesian3.equalsEpsilon(
+        this.position,
+        Cartesian3.ZERO,
+        HEditorMath.EPSILON2
+      )
+    ) {
+      const p = Cartesian3.normalize(position)
+      const northParallel = Cartesian3.equalsEpsilon(
+        p,
+        this.constrainedAxis,
+        HEditorMath.EPSILON2
+      )
+      const southParallel = Cartesian3.equalsEpsilon(
+        p,
+        Cartesian3.negate(this.constrainedAxis, new Cartesian3()),
+        HEditorMath.EPSILON2
+      )
+      if (!northParallel && !southParallel) {
+        const constrainedAxis = Cartesian3.normalize(this.constrainedAxis)
+
+        let dot = Cartesian3.dot(p, constrainedAxis)
+        let angleToAxis = HEditorMath.acosClamped(dot)
+        if (angle > 0 && angle > angleToAxis) {
+          angle = angleToAxis - HEditorMath.EPSILON4
+        }
+
+        dot = Cartesian3.dot(
+          p,
+          Cartesian3.negate(constrainedAxis, new Cartesian3())
+        )
+        angleToAxis = HEditorMath.acosClamped(dot)
+        if (angle < 0 && -angle > angleToAxis) {
+          angle = -angleToAxis + HEditorMath.EPSILON4
+        }
+
+        const tangent = Cartesian3.cross(constrainedAxis, p, new Cartesian3())
+        this.rotate(tangent, angle)
+      } else if ((northParallel && angle < 0) || (southParallel && angle > 0)) {
+        this.rotate(this.right, angle)
+      }
+    } else {
+      this.rotate(this.right, angle)
+    }
+  }
+  private _rotateHorizonTal(angle: number) {
+    if (defined(this.constrainedAxis)) {
+      this.rotate(this.constrainedAxis, angle)
+    } else {
+      this.rotate(this.up, angle)
+    }
+  }
+  public rotate(axis: Cartesian3, angle?: number) {
+    if (!defined(axis)) {
+      throw new Error('axis is required.')
+    }
+
+    const turnAngle = defaultValue(angle, this._defaultRotateAmount)
+    const quaternion = Quaternion.fromAxisAngle(axis, turnAngle)
+
+    const rotation = Matrix3.fromQuaternion(quaternion)
+    Matrix3.multiplyByVector(rotation, this.position, this.position)
+    Matrix3.multiplyByVector(rotation, this.direction, this.direction)
+    Matrix3.multiplyByVector(rotation, this.up, this.up)
+    Cartesian3.cross(this.direction, this.up, this.right)
+    Cartesian3.cross(this.right, this.direction, this.up)
+
+    this._adjustOrthographicFrustum(false)
+  }
+  public rotateDown(angle?: number) {
+    angle = defaultValue(angle, this._defaultRotateAmount)
+
+    this._rotateVertical(angle)
+  }
+  public rotateUp(angle?: number) {
+    angle = defaultValue(angle, this._defaultRotateAmount)
+
+    this._rotateVertical(-angle)
+  }
+  public rotateRight(angle?: number) {
+    angle = defaultValue(angle, this._defaultRotateAmount)
+
+    this._rotateHorizonTal(-angle)
+  }
+  public rotateLeft(angle?: number) {
+    angle = defaultValue(angle, this._defaultRotateAmount)
+    this._rotateHorizonTal(angle)
+  }
+
+  private _zoom3D(amount: number) {
+    this.move(this.direction, amount)
+  }
+  public zoomIn(amount?: number) {
+    amount = defaultValue(amount, this._defaultZoomAmount)
+
+    this._zoom3D(amount)
+  }
+  public zoomOut(amount?: number) {
+    amount = defaultValue(amount, this._defaultZoomAmount)
+
+    this._zoom3D(-amount)
   }
 }

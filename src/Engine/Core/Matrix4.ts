@@ -1,5 +1,8 @@
+import BoundingRectangle from './BoundingRectangle'
 import Cartesian3 from './Cartesian3'
 import Cartesian4 from './Cartesian4'
+import defaultValue from './DefaultValue'
+import { defined } from './Defined'
 import Matrix3 from './Matrix3'
 
 export default class Matrix4 {
@@ -87,6 +90,12 @@ export default class Matrix4 {
     cartesian: Cartesian4,
     result?: Cartesian4
   ) => Cartesian4
+  static computeViewportTransformation: (
+    viewport: BoundingRectangle,
+    nearDepthRange: number,
+    farDepthRange: number,
+    result?: Matrix4
+  ) => Matrix4
 
   get values() {
     return this._values
@@ -717,5 +726,55 @@ Matrix4.multiplyByVector = function (
     matrix.values[7] * y +
     matrix.values[11] * z +
     matrix.values[15] * w
+  return result
+}
+
+Matrix4.computeViewportTransformation = function (
+  viewport: BoundingRectangle,
+  nearDepthRange: number,
+  farDepthRange: number,
+  result?: Matrix4
+) {
+  if (!defined(result)) {
+    result = new Matrix4()
+  }
+
+  viewport = defaultValue(viewport, new BoundingRectangle())
+  const x = viewport.x
+  const y = viewport.y
+  const width = viewport.width
+  const height = viewport.height
+
+  nearDepthRange = defaultValue(nearDepthRange, 0.0)
+  farDepthRange = defaultValue(farDepthRange, 1.0)
+
+  const halfWidth = width * 0.5
+  const halfHeight = height * 0.5
+  const halfDepth = (farDepthRange - nearDepthRange) * 0.5
+
+  const column0Row0 = halfWidth
+  const column1Row1 = halfHeight
+  const column2Row2 = halfDepth
+  const column3Row0 = x + halfWidth
+  const column3Row1 = y + halfHeight
+  const column3Row2 = nearDepthRange + halfDepth
+  const column3Row3 = 1.0
+
+  result.values[0] = column0Row0
+  result.values[1] = 0.0
+  result.values[2] = 0.0
+  result.values[3] = 0.0
+  result.values[4] = 0.0
+  result.values[5] = column1Row1
+  result.values[6] = 0.0
+  result.values[7] = 0.0
+  result.values[8] = 0.0
+  result.values[9] = 0.0
+  result.values[10] = column2Row2
+  result.values[11] = 0.0
+  result.values[12] = column3Row0
+  result.values[13] = column3Row1
+  result.values[14] = column3Row2
+  result.values[15] = column3Row3
   return result
 }

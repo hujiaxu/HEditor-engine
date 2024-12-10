@@ -1,4 +1,5 @@
 import { OrthographicFrustumOptions } from '../../type'
+import Cartesian2 from './Cartesian2'
 import defaultValue from './DefaultValue'
 import OrthographicOffCenterFrustum from './OrthographicOffCenterFrustum'
 
@@ -14,6 +15,9 @@ export default class OrthographicFrustum {
   }
   get width() {
     return this._width
+  }
+  set width(value: number) {
+    this._width = value
   }
   get aspectRatio() {
     return this._aspectRatio
@@ -32,4 +36,23 @@ export default class OrthographicFrustum {
     this._near = defaultValue(near, 0.0)
     this._far = defaultValue(far, 500000000.0)
   }
+
+  public getPixelDimensions(
+    drawingBufferWidth: number,
+    drawingBufferHeight: number,
+    distance: number,
+    pixelRatio: number,
+    result?: Cartesian2
+  ) {
+    this._update()
+    return this._offCenterFrustum.getPixelDimensions(
+      drawingBufferWidth,
+      drawingBufferHeight,
+      distance,
+      pixelRatio,
+      result
+    )
+  }
+
+  private _update() {}
 }

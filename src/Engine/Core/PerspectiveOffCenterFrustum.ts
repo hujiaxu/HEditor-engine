@@ -1,4 +1,6 @@
 import { PerspectiveOffCenterFrustumOptions } from '../../type'
+import Cartesian2 from './Cartesian2'
+import { defined } from './Defined'
 import Matrix4 from './Matrix4'
 
 export default class PerspectiveOffCenterFrustum {
@@ -12,7 +14,7 @@ export default class PerspectiveOffCenterFrustum {
   private _projectionMatrix: Matrix4
 
   get projectionMatrix() {
-    this.update(this)
+    this._update(this)
     return this._projectionMatrix
   }
 
@@ -86,7 +88,53 @@ export default class PerspectiveOffCenterFrustum {
     )
   }
 
-  update(offCenterFrustum: PerspectiveOffCenterFrustum) {
+  public getPixelDimensions(
+    drawingBufferWidth: number,
+    drawingBufferHeight: number,
+    distance: number,
+    pixelRatio: number,
+    result?: Cartesian2
+  ) {
+    this._update(this)
+
+    if (!defined(drawingBufferWidth) || !defined(drawingBufferHeight)) {
+      throw new Error(
+        'drawingBufferWidth and drawingBufferHeight are required.'
+      )
+    }
+    if (drawingBufferHeight <= 0) {
+      throw new Error('drawingBufferHeight must be greater than zero.')
+    }
+    if (drawingBufferWidth <= 0) {
+      throw new Error('drawingBufferWidth must be greater than zero.')
+    }
+    if (!defined(distance)) {
+      throw new Error('distance is required.')
+    }
+    if (!defined(pixelRatio)) {
+      throw new Error('pixelRatio is required.')
+    }
+    if (pixelRatio <= 0) {
+      throw new Error('pixelRatio must be greater than zero.')
+    }
+    if (!defined(result)) {
+      result = new Cartesian2()
+    }
+
+    const inverseNear = 1.0 / this.near
+    let tanTheta = this.top * inverseNear
+    const pixelHeight =
+      (2.0 * pixelRatio * distance * tanTheta) / drawingBufferHeight
+    tanTheta = this.right * inverseNear
+    const pixelWidth =
+      (2.0 * pixelRatio * distance * tanTheta) / drawingBufferWidth
+
+    result.x = pixelWidth
+    result.y = pixelHeight
+    return result
+  }
+
+  private _update(offCenterFrustum: PerspectiveOffCenterFrustum) {
     this.left = offCenterFrustum.left
     this.right = offCenterFrustum.right
     this.top = offCenterFrustum.top

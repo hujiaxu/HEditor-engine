@@ -1,4 +1,5 @@
 import { PerspectiveFrustumOptions } from '../../type'
+import Cartesian2 from './Cartesian2'
 import PerspectiveOffCenterFrustum from './PerspectiveOffCenterFrustum'
 
 export default class PerspectiveFrustum {
@@ -78,6 +79,23 @@ export default class PerspectiveFrustum {
   get projectionMatrix() {
     this.update(this)
     return this._offCenterFrustum.projectionMatrix
+  }
+
+  public getPixelDimensions(
+    drawingBufferWidth: number,
+    drawingBufferHeight: number,
+    distance: number,
+    pixelRatio: number,
+    result?: Cartesian2
+  ) {
+    this.update(this)
+    return this._offCenterFrustum.getPixelDimensions(
+      drawingBufferWidth,
+      drawingBufferHeight,
+      distance,
+      pixelRatio,
+      result
+    )
   }
 
   update(frustum: PerspectiveFrustum) {

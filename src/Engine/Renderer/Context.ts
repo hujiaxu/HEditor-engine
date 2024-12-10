@@ -13,6 +13,7 @@ export default class Context {
   private _useGPU: boolean = false
   private _gpuAdapter: GPUAdapter | undefined
   private _gpuDevice: GPUDevice | undefined
+  private _depthTexture: boolean
 
   private _uniformState: UniformState
 
@@ -27,6 +28,9 @@ export default class Context {
   get uniformState() {
     return this._uniformState
   }
+  get depthTexture() {
+    return this._depthTexture
+  }
 
   constructor(options: ContextOptions) {
     this._canvas = options.canvas
@@ -38,6 +42,11 @@ export default class Context {
     this._uniformState = new UniformState({
       gl: this.gl
     })
+
+    this._depthTexture = !!getExtension(this.gl, [
+      'WEBGL_depth_texture',
+      'WEBKIT_WEBGL_depth_texture'
+    ])
   }
 
   private _initContext() {

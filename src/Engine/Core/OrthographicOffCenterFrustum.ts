@@ -1,4 +1,6 @@
 import { OrthographicOffCenterFrustumOptions } from '../../type'
+import Cartesian2 from './Cartesian2'
+import { defined } from './Defined'
 
 export default class OrthographicOffCenterFrustum {
   private _left: number
@@ -41,4 +43,52 @@ export default class OrthographicOffCenterFrustum {
     this._near = near
     this._far = far
   }
+
+  public getPixelDimensions(
+    drawingBufferWidth: number,
+    drawingBufferHeight: number,
+    distance: number,
+    pixelRatio: number,
+    result?: Cartesian2
+  ) {
+    this._update()
+
+    if (!defined(drawingBufferHeight) || !defined(drawingBufferWidth)) {
+      throw new Error(
+        'drawingBufferHeight and drawingBufferWidth are required.'
+      )
+    }
+    if (drawingBufferHeight <= 0) {
+      throw new Error(
+        'drawingBufferHeight is required to be greater than zero.'
+      )
+    }
+    if (drawingBufferWidth <= 0) {
+      throw new Error('drawingBufferWidth is required to be greater than zero.')
+    }
+    if (!defined(distance)) {
+      throw new Error('distance is required.')
+    }
+    if (!defined(pixelRatio)) {
+      throw new Error('pixelRatio is required.')
+    }
+    if (pixelRatio <= 0) {
+      throw new Error('pixelRatio is required to be greater than zero.')
+    }
+    if (!defined(result)) {
+      result = new Cartesian2()
+    }
+
+    const frustumWidth = this.right - this.left
+    const frustumHeight = this.top - this.bottom
+    const pixelWidth = (pixelRatio * frustumWidth) / drawingBufferWidth
+    const pixelHeight = (pixelRatio * frustumHeight) / drawingBufferHeight
+
+    result.x = pixelWidth
+    result.y = pixelHeight
+
+    return result
+  }
+
+  private _update() {}
 }

@@ -10,5 +10,5 @@ export interface EventStartPosition {
   [key: string]: Cartesian2
 }
 export interface PressTime {
-  [key: string]: Date | number
+  [key: string]: Date
 }
