@@ -35,6 +35,7 @@ export default class EllipsoidGeodesic {
 
     this._startHeading = undefined
     this._endHeading = undefined
+    console.log('this._endHeading: ', this._endHeading)
     this._distance = undefined
     this._uSquared = undefined
 
@@ -163,6 +164,8 @@ export default class EllipsoidGeodesic {
     const lastCartesian = Cartesian3.normalize(
       ellipsoid.cartographicToCartesian(end)
     )
+
+    console.log(firstCartesian, lastCartesian)
 
     this._vincentyInverseFormula(
       ellipsoid.maximumRadius,

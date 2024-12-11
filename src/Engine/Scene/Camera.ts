@@ -67,6 +67,9 @@ export default class Camera {
   private _positionCartographic: Cartographic
   private _maxCoord: Cartesian3
   private _mode: SceneMode
+  heading: number = 0.0
+  pitch: number = -HEditorMath.PI_OVER_TWO
+  roll: number = 0.0
 
   get viewMatrix() {
     this.updateViewMatrix(this)
@@ -219,6 +222,7 @@ export default class Camera {
 
     const scene = this.scene
     const globe = scene.globe
+    console.log('globe: ', globe)
   }
   _adjustOrthographicFrustum(zooming: boolean) {
     if (!(this.frustum instanceof OrthographicFrustum)) return
@@ -522,6 +526,7 @@ export default class Camera {
         throw new Error('destination has a NaN component.')
       }
       convert = false
+      console.log('convert: ', convert)
     }
 
     if (defined((orientation as OrientationDirectionType).direction)) {
@@ -532,12 +537,18 @@ export default class Camera {
     }
 
     const scratchHpr = new HeadingPitchRoll()
-    scratchHpr.heading = defaultValue(orientation.heading, 0.0)
-    scratchHpr.pitch = defaultValue(orientation.pitch, -HEditorMath.PI_OVER_TWO)
-    scratchHpr.roll = defaultValue(orientation.roll, 0.0)
+    scratchHpr.heading = defaultValue(
+      (orientation as HeadingPitchRoll).heading,
+      0.0
+    )
+    scratchHpr.pitch = defaultValue(
+      (orientation as HeadingPitchRoll).pitch,
+      -HEditorMath.PI_OVER_TWO
+    )
+    scratchHpr.roll = defaultValue((orientation as HeadingPitchRoll).roll, 0.0)
 
     if (mode === SceneMode.SCENE3D) {
-      this.setView3D(destination, scratchHpr)
+      this._setView3D(destination as Cartesian3, scratchHpr)
     }
   }
 
@@ -568,10 +579,12 @@ export default class Camera {
     let east = rectangle.east
     const west = rectangle.west
 
+    // 处理国际日期限的跨越
     if (west > east) {
       east += HEditorMath.TWO_PI
     }
 
+    // 计算矩形的中心经纬度
     const longitude = (west + east) * 0.5
     let latitude
     if (
@@ -606,11 +619,11 @@ export default class Camera {
       latitude = ellipsoidGeodesic.interpolateUsingFraction(0.5).latitude
     }
 
+    // 计算矩形中心点的笛卡尔坐标
     const centerCartographic = new Cartographic()
     centerCartographic.longitude = longitude
     centerCartographic.latitude = latitude
     centerCartographic.height = 0.0
-
     const center = ellipsoid.cartographicToCartesian(centerCartographic)
 
     // 计算角点: 计算矩形四个角(东北, 北西, 南东, 南西)的笛卡尔坐标
@@ -641,6 +654,7 @@ export default class Camera {
     Cartesian3.subtract(northCenter, center, northCenter)
     Cartesian3.subtract(southCenter, center, southCenter)
 
+    // 计算相机方向, 右向量和上向量
     const direction = ellipsoid.geodeticSurfaceNormal(
       center,
       cameraRF.direction
@@ -652,6 +666,7 @@ export default class Camera {
 
     let d
     if (this.frustum instanceof OrthographicFrustum) {
+      // 计算正交视锥体中的相机位置
       const width = Math.max(
         Cartesian3.distance(northWest, southEast),
         Cartesian3.distance(southEast, southWest)
@@ -675,6 +690,7 @@ export default class Camera {
 
       d = Math.max(rightScalar, topScalar)
     } else {
+      // 计算透视视锥体中的相机位置
       const tanPhi = Math.tan(this.frustum.fovy * 0.5)
       const tanTheta = this.frustum.aspectRatio * tanPhi
 
@@ -757,6 +773,31 @@ export default class Camera {
     result.pitch = this._getPitch(direction)
     result.roll = this._getRoll(direction, up, right)
     return result
+  }
+  private _setView3D(position: Cartesian3, hpr: HeadingPitchRoll) {
+    if (isNaN(position.x) || isNaN(position.y) || isNaN(position.z)) {
+      throw new Error('position is required')
+    }
+
+    const currentTransform = Matrix4.clone(this.transform)
+    const localTransform = Transforms.eastNorthUpToFixedFrame(
+      position,
+      this._projection.ellipsoid
+    )
+    this.setTransform(localTransform)
+
+    Cartesian3.clone(Cartesian3.ZERO, this.position)
+    hpr.heading = hpr.heading - HEditorMath.PI_OVER_TWO
+
+    const rotQuat = Quaternion.fromHeadingPitchRoll(hpr)
+    const rotMat = Matrix3.fromQuaternion(rotQuat)
+
+    Matrix3.getColumn(rotMat, 0, this.direction)
+    Matrix3.getColumn(rotMat, 2, this.up)
+    Cartesian3.cross(this.direction, this.up, this.right)
+
+    this.setTransform(currentTransform)
+    this._adjustOrthographicFrustum(true)
   }
 
   private _getHeading(direction: Cartesian3, up: Cartesian3) {

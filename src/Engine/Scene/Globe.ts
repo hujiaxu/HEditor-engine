@@ -6,12 +6,19 @@ import Scene from './Scene'
 
 export default class Globe {
   private _ellipsoid: Ellipsoid
+  private _terrainProvider: EllipsoidTerrainProvider
 
+  get ellipsoid() {
+    return this._ellipsoid
+  }
+  get terrainProvider() {
+    return this._terrainProvider
+  }
   constructor(ellipsoid: Ellipsoid) {
     ellipsoid = defaultValue(ellipsoid, Ellipsoid.default)
     this._ellipsoid = ellipsoid
 
-    const terrainProvider = new EllipsoidTerrainProvider({
+    this._terrainProvider = new EllipsoidTerrainProvider({
       ellipsoid: ellipsoid
     })
   }
@@ -21,6 +28,9 @@ export default class Globe {
     scene: Scene,
     cameraUnderground: boolean
   ) {
+    if (cameraUnderground) {
+      console.log(scene)
+    }
     return ray.origin
   }
 }

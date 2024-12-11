@@ -21,5 +21,7 @@
   "exclude": [
     "lib",
     "node_modules"
-  ]
+  ],
+  "rules": {
+  }
 }

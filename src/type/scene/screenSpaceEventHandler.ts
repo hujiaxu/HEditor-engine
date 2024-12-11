@@ -1,4 +1,6 @@
+import ScreenSpaceCameraController from '../../Engine/Scene/ScreenSpaceCameraController'
 import Cartesian2 from '../../Engine/Core/Cartesian2'
+import Cartesian3 from '../../Engine/Core/Cartesian3'
 
 export interface LastInertiaConstructor {
   startPosition: Cartesian2
@@ -47,3 +49,10 @@ export type EventFunctionType =
   | DoublePositionEventFunction
   | PinchMoveEventFunction
   | MoveEventFunction
+
+export type InputActionFunction = (
+  controller: ScreenSpaceCameraController,
+  startPosition: Cartesian2,
+  movement: Movement | PinchMovement | LastInertiaConstructor,
+  rotationAxis?: Cartesian3
+) => void

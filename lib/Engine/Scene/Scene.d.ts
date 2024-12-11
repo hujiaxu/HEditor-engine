@@ -1,0 +1,35 @@
+import { SceneOptions } from '../../type';
+import Cartesian2 from '../Core/Cartesian2';
+import Cartesian3 from '../Core/Cartesian3';
+import Ellipsoid from '../Core/Ellipsoid';
+import GeographicProjection from '../Core/GeographicProjection';
+import Camera from './Camera';
+import FrameState from './FrameState';
+import Globe from './Globe';
+import ScreenSpaceCameraController from './ScreenSpaceCameraController';
+export default class Scene {
+    canvas: HTMLCanvasElement;
+    isUseGPU: boolean;
+    globe: Globe;
+    private _context;
+    private _frameState;
+    private _ellipsoid;
+    camera: Camera;
+    private _mapProjection;
+    private _globeHeight;
+    private _screenSpaceCameraController;
+    get screenSpaceCameraController(): ScreenSpaceCameraController;
+    get mapProjection(): GeographicProjection;
+    get ellipsoid(): Ellipsoid;
+    get drawingBufferWidth(): number;
+    get drawingBufferHeight(): number;
+    get pixelRatio(): number;
+    set pixelRatio(value: number);
+    get pickPositionSupported(): boolean;
+    get globeHeight(): number | undefined;
+    get frameState(): FrameState;
+    get mode(): import("../../type").SceneMode;
+    constructor(options: SceneOptions);
+    pickPositionWorldCoordinates(windowPosition: Cartesian2, result?: Cartesian3): Cartesian3;
+    draw(): void;
+}

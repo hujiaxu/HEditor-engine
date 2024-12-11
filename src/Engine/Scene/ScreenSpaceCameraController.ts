@@ -1,5 +1,6 @@
 import {
   CameraEventType,
+  InputActionFunction,
   KeyboardEventModifier,
   LastInertiaConstructor,
   Movement,
@@ -252,7 +253,7 @@ export default class ScreenSpaceCameraController {
       | CameraEventType
       | EventTypeAndModifier
       | (CameraEventType | EventTypeAndModifier)[],
-    action: Function,
+    action: InputActionFunction,
     inertiaConstant?: number,
     inertiaStateName?: LastInertiaType
   ) {
@@ -281,7 +282,11 @@ export default class ScreenSpaceCameraController {
 
       if (controller.enableInputs && enabled) {
         if (movement) {
-          action(controller, startPosition, movement)
+          if ('startPosition' in movement) {
+            action(controller, startPosition, movement)
+          } else {
+            action(controller, startPosition, movement)
+          }
 
           controller._activateInertia(controller, inertiaStateName)
         } else if (inertiaConstant && inertiaConstant < 1.0) {
@@ -326,7 +331,7 @@ export default class ScreenSpaceCameraController {
     type: CameraEventType,
     modifier: KeyboardEventModifier | undefined,
     decayCoef: number,
-    action: Function,
+    action: InputActionFunction,
     object: ScreenSpaceCameraController,
     inertiaStateName?: LastInertiaType
   ) {
@@ -402,6 +407,7 @@ export default class ScreenSpaceCameraController {
       controller,
       controller.enableRotate,
       controller.rotateEventTypes,
+      // @ts-expect-error: _spin3D function has incompatible parameter types, but it's a known issue that will be fixed later
       controller._spin3D,
       controller.inertiaSpin,
       '_lastInertiaSpinMovement'
@@ -426,6 +432,7 @@ export default class ScreenSpaceCameraController {
       controller,
       controller.enableLook,
       controller.lookEventTypes,
+      // @ts-expect-error: _look3D function has incompatible parameter types, but it's a known issue that will be fixed later
       controller._look3D
     )
   }
@@ -1603,7 +1610,7 @@ export default class ScreenSpaceCameraController {
     controller: ScreenSpaceCameraController,
     startPosition: Cartesian2,
     movement: Movement | LastInertiaConstructor,
-    rotationAxis: Cartesian3
+    rotationAxis?: Cartesian3
   ) {
     const scene = controller._scene
     const camera = scene.camera

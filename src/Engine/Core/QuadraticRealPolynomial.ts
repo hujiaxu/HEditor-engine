@@ -15,7 +15,7 @@ export const addWithCancellationCheck = (
 
   return difference
 }
-export default class QuarticRealPolynomial {
+export default class QuadraticRealPolynomial {
   static computeRealRoots: (
     a: number,
     b: number,
@@ -23,7 +23,11 @@ export default class QuarticRealPolynomial {
   ) => number[] | undefined
 }
 
-QuarticRealPolynomial.computeRealRoots = (a: number, b: number, c: number) => {
+QuadraticRealPolynomial.computeRealRoots = (
+  a: number,
+  b: number,
+  c: number
+) => {
   if (typeof a !== 'number') {
     throw new Error('a must be a number')
   }

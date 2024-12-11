@@ -28,6 +28,10 @@ export default class OrthographicFrustum {
   get far() {
     return this._far
   }
+  get projectionMatrix() {
+    this._update()
+    return this._offCenterFrustum.projectionMatrix
+  }
   constructor({ width, aspectRatio, near, far }: OrthographicFrustumOptions) {
     this._offCenterFrustum = new OrthographicOffCenterFrustum({})
 

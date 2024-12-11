@@ -1,6 +1,7 @@
 import { OrthographicOffCenterFrustumOptions } from '../../type'
 import Cartesian2 from './Cartesian2'
 import { defined } from './Defined'
+import Matrix4 from './Matrix4'
 
 export default class OrthographicOffCenterFrustum {
   private _left: number
@@ -9,16 +10,20 @@ export default class OrthographicOffCenterFrustum {
   private _top: number
   private _near: number
   private _far: number
+  private _projectionMatrix: Matrix4 = new Matrix4()
 
   get left() {
     return this._left
   }
+
   get right() {
     return this._right
   }
+
   get bottom() {
     return this._bottom
   }
+
   get top() {
     return this._top
   }
@@ -27,6 +32,10 @@ export default class OrthographicOffCenterFrustum {
   }
   get far() {
     return this._far
+  }
+  get projectionMatrix() {
+    this._update()
+    return this._projectionMatrix
   }
   constructor({
     left = 0.0,
@@ -79,8 +88,8 @@ export default class OrthographicOffCenterFrustum {
       result = new Cartesian2()
     }
 
-    const frustumWidth = this.right - this.left
-    const frustumHeight = this.top - this.bottom
+    const frustumWidth = this._right - this._left
+    const frustumHeight = this._top - this._bottom
     const pixelWidth = (pixelRatio * frustumWidth) / drawingBufferWidth
     const pixelHeight = (pixelRatio * frustumHeight) / drawingBufferHeight
 
@@ -90,5 +99,20 @@ export default class OrthographicOffCenterFrustum {
     return result
   }
 
-  private _update() {}
+  private _update(offCenterFrustum: OrthographicOffCenterFrustum = this) {
+    this._left = offCenterFrustum._left
+    this._right = offCenterFrustum._right
+    this._top = offCenterFrustum._top
+    this._bottom = offCenterFrustum._bottom
+    this._near = offCenterFrustum._near
+    this._far = offCenterFrustum._far
+    this._projectionMatrix = Matrix4.computePerspectiveOffCenter(
+      this._left,
+      this._right,
+      this._bottom,
+      this._top,
+      this._near,
+      this._far
+    )
+  }
 }

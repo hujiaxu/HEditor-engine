@@ -128,10 +128,12 @@ const degeneratePositionLocalFrame = {
   west: [0, -1, 0],
   down: [0, 0, -1]
 }
-const localFrameToFixedFrameCache: Record<
-  string,
-  (origin: Cartesian3, ellipsoid: Ellipsoid, result?: Matrix4) => Matrix4
-> = ({} = {})
+let localFrameToFixedFrameCache:
+  | Record<
+      string,
+      (origin: Cartesian3, ellipsoid: Ellipsoid, result?: Matrix4) => Matrix4
+    >
+  | undefined = undefined
 
 export type FixedFrameFunction = (
   origin: Cartesian3,
@@ -160,6 +162,9 @@ Transforms.localFrameToFixedFrameGenerator = (
 
   let resultat
   const hashAxis = firstAxis + secondAxis
+  if (!defined(localFrameToFixedFrameCache)) {
+    localFrameToFixedFrameCache = {}
+  }
   if (defined(localFrameToFixedFrameCache[hashAxis])) {
     resultat = localFrameToFixedFrameCache[hashAxis]
   } else {

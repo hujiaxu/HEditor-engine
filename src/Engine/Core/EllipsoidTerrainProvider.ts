@@ -1,5 +1,12 @@
 import Ellipsoid from './Ellipsoid'
 
 export default class EllipsoidTerrainProvider {
-  constructor({ ellipsoid }: { ellipsoid: Ellipsoid }) {}
+  private _ellipsoid: Ellipsoid
+
+  get ellipsoid() {
+    return this._ellipsoid
+  }
+  constructor({ ellipsoid }: { ellipsoid: Ellipsoid }) {
+    this._ellipsoid = ellipsoid
+  }
 }

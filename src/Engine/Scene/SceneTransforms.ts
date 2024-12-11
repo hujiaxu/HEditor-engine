@@ -55,12 +55,12 @@ export default class SceneTransforms {
     position: Cartesian3,
     eyeOffset: Cartesian3,
     result?: Cartesian2
-  ) => undefined
+  ) => Cartesian2 | undefined
   static worldToWindowCoordinates: (
     scene: Scene,
     position: Cartesian3,
     result?: Cartesian2
-  ) => undefined
+  ) => Cartesian2 | undefined
 }
 
 SceneTransforms.computeActualEllipsoidPosition = function (
@@ -97,7 +97,7 @@ SceneTransforms.worldWithEyeOffsetToWindowCoordinates = function (
   scene: Scene,
   position: Cartesian3,
   eyeOffset: Cartesian3,
-  result?: Cartesian2
+  result: Cartesian2 = new Cartesian2()
 ) {
   if (!defined(scene)) {
     throw new Error('scene is required')
@@ -144,6 +144,8 @@ SceneTransforms.worldWithEyeOffsetToWindowCoordinates = function (
       result
     )
   }
+
+  return result
 }
 SceneTransforms.worldToWindowCoordinates = function (
   scene: Scene,

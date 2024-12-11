@@ -6,6 +6,7 @@ import Interval from './Interval'
 import HEditorMath from './Math'
 import Matrix3 from './Matrix3'
 import Plane from './Plane'
+import QuarticRealPolynomial from './QuarticRealPolynomial'
 import QuadraticRealPolynomial, {
   addWithCancellationCheck
 } from './QuadraticRealPolynomial'
