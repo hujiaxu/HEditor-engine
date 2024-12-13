@@ -23,7 +23,6 @@ export default class Cartesian4 {
   }
 }
 
-Cartesian4.UNIT_W = Cartesian4.clone(new Cartesian4(0.0, 0.0, 0.0, 1.0))
 Cartesian4.clone = (cartesian: Cartesian4, result?: Cartesian4) => {
   if (!defined(cartesian)) {
     throw new Error('cartesian is required.')
@@ -53,3 +52,5 @@ Cartesian4.fromElements = function (
   result.w = w
   return result
 }
+
+Cartesian4.UNIT_W = Cartesian4.clone(new Cartesian4(0.0, 0.0, 0.0, 1.0))

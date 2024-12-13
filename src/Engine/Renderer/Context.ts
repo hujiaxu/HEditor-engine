@@ -144,7 +144,6 @@ export default class Context {
       geometry
     })
 
-    console.log(va)
     context.glBindVertexArray!(va.vao)
 
     context.gl.viewport(

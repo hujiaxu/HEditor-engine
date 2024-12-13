@@ -155,7 +155,6 @@ export default class ShaderProgram {
       program,
       gl.ACTIVE_UNIFORMS
     ) as number
-    console.log(numberOfUniforms, 'numberOfUniforms ')
 
     const uniforms: { [key: string]: Uniform } = {}
     for (let index = 0; index < numberOfUniforms; index++) {

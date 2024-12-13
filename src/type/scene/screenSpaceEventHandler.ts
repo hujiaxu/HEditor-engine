@@ -1,6 +1,9 @@
 import ScreenSpaceCameraController from '../../Engine/Scene/ScreenSpaceCameraController'
 import Cartesian2 from '../../Engine/Core/Cartesian2'
 import Cartesian3 from '../../Engine/Core/Cartesian3'
+import { CameraEventType } from './cameraEventType'
+import { KeyboardEventModifier } from './keyboardEventModifier'
+import ScreenSpaceCameraControllerForEditor from '../../Engine/Scene/ScreenSpaceCameraControllerForEditor'
 
 export interface LastInertiaConstructor {
   startPosition: Cartesian2
@@ -56,3 +59,20 @@ export type InputActionFunction = (
   movement: Movement | PinchMovement | LastInertiaConstructor,
   rotationAxis?: Cartesian3
 ) => void
+
+export type InputActionFunctionForEditor = (
+  controller: ScreenSpaceCameraControllerForEditor,
+  startPosition: Cartesian2,
+  movement: Movement | PinchMovement | LastInertiaConstructor,
+  rotationAxis?: Cartesian3
+) => void
+export interface EventTypeAndModifier {
+  eventType: CameraEventType
+  modifier: KeyboardEventModifier
+}
+
+export type LastInertiaType =
+  | '_lastInertiaSpinMovement'
+  | '_lastInertiaZoomMovement'
+  | '_lastInertiaTranslateMovement'
+  | '_lastInertiaTiltMovement'

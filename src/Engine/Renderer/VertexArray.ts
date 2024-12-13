@@ -27,7 +27,6 @@ export default class VertexArray {
     this.geometry = geometry
 
     const { gl, shaderProgram } = context
-    console.log('shaderProgram: ', shaderProgram)
 
     const { attributes, indices } = geometry
     const numberOfVertexAttributes = gl!.getProgramParameter(

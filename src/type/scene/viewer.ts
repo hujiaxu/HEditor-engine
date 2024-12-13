@@ -5,4 +5,6 @@ export interface ViewerOptions {
   canvasWidth?: number
 
   useGPU?: boolean
+
+  defaultRenderLoop?: boolean
 }

@@ -18,6 +18,7 @@ export default class Scene {
     private _mapProjection;
     private _globeHeight;
     private _screenSpaceCameraController;
+    private _screenSpaceCameraControllerForEditor;
     get screenSpaceCameraController(): ScreenSpaceCameraController;
     get mapProjection(): GeographicProjection;
     get ellipsoid(): Ellipsoid;

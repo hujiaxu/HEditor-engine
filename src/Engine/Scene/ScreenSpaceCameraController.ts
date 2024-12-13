@@ -1,8 +1,10 @@
 import {
   CameraEventType,
+  EventTypeAndModifier,
   InputActionFunction,
   KeyboardEventModifier,
   LastInertiaConstructor,
+  LastInertiaType,
   Movement,
   MovePositionEvent,
   PinchMovement,
@@ -33,11 +35,6 @@ import HeadingPitchRoll from '../Core/HeadingPitchRoll'
 import SceneTransforms from './SceneTransforms'
 
 let preIntersectionDistance = 0
-
-interface EventTypeAndModifier {
-  eventType: CameraEventType
-  modifier: KeyboardEventModifier
-}
 
 const sameMousePosition = (movement: MovePositionEvent) => {
   return Cartesian2.equalsEpsilon(
@@ -78,12 +75,6 @@ const zoomCVWindowRay = new Ray()
 const zoom3DCartographic = new Cartographic()
 
 const tilt3DRay = new Ray()
-
-type LastInertiaType =
-  | '_lastInertiaSpinMovement'
-  | '_lastInertiaZoomMovement'
-  | '_lastInertiaTranslateMovement'
-  | '_lastInertiaTiltMovement'
 
 const inertiaMaxClickTimeThreshold = 0.4
 

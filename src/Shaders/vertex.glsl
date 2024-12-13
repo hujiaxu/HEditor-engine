@@ -16,5 +16,5 @@ void main() {
   float x = a_position.x;
   float y = a_position.y * u_aspect;
   vec4 pos = vec4(x, y, 0.0, 1.0);
-  gl_Position = u_projectionMatrix * u_viewMatrix * pos;
+  gl_Position = pos;
 }

@@ -3,6 +3,7 @@ import Scene from './Scene/Scene';
 export default class Viewer {
     canvas: HTMLCanvasElement;
     scene: Scene;
-    constructor({ container, canvasHeight, canvasWidth, useGPU }: ViewerOptions);
+    defaultRenderLoop: boolean;
+    constructor({ container, canvasHeight, canvasWidth, useGPU, defaultRenderLoop }: ViewerOptions);
     draw(): void;
 }

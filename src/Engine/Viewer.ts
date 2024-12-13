@@ -1,16 +1,19 @@
 import { ViewerOptions } from '../type'
+import defaultValue from './Core/DefaultValue'
 import Scene from './Scene/Scene'
 
 export default class Viewer {
-  canvas: HTMLCanvasElement
+  public canvas: HTMLCanvasElement
 
-  scene: Scene
+  public scene: Scene
+  public defaultRenderLoop: boolean
 
   constructor({
     container,
     canvasHeight,
     canvasWidth,
-    useGPU = false
+    useGPU = false,
+    defaultRenderLoop
   }: ViewerOptions) {
     const element = document.getElementById(container)
     if (!element) {
@@ -34,9 +37,17 @@ export default class Viewer {
       canvas: this.canvas,
       isUseGPU: useGPU
     })
+    this.defaultRenderLoop = defaultValue(defaultRenderLoop, true)
+
+    this.draw()
   }
 
   draw() {
+    if (this.defaultRenderLoop) {
+      requestAnimationFrame(() => {
+        this.draw()
+      })
+    }
     this.scene.draw()
   }
 }

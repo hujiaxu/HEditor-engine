@@ -11,6 +11,7 @@ import Geometry from './Geometry'
 import GeometryAttribute from './GeometryAttribute'
 import Globe from './Globe'
 import ScreenSpaceCameraController from './ScreenSpaceCameraController'
+import ScreenSpaceCameraControllerForEditor from './ScreenSpaceCameraControllerForEditor'
 
 export default class Scene {
   canvas: HTMLCanvasElement
@@ -25,6 +26,7 @@ export default class Scene {
   private _mapProjection: GeographicProjection
   private _globeHeight: undefined | number
   private _screenSpaceCameraController: ScreenSpaceCameraController
+  private _screenSpaceCameraControllerForEditor: ScreenSpaceCameraControllerForEditor
 
   get screenSpaceCameraController() {
     return this._screenSpaceCameraController
@@ -87,6 +89,8 @@ export default class Scene {
     this.globe = new Globe(this._ellipsoid)
 
     this._screenSpaceCameraController = new ScreenSpaceCameraController(this)
+    this._screenSpaceCameraControllerForEditor =
+      new ScreenSpaceCameraControllerForEditor(this)
   }
 
   public pickPositionWorldCoordinates(
@@ -97,6 +101,7 @@ export default class Scene {
   }
 
   draw() {
+    this._screenSpaceCameraControllerForEditor.update()
     const geometry = new Geometry({
       attributes: {
         position: new GeometryAttribute({
