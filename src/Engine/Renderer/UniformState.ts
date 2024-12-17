@@ -12,14 +12,6 @@ export default class UniformState {
   } = {}
   constructor({ gl }: UniformStateOptions) {
     this.gl = gl
-
-    const u_drawingBufferHeight = gl.drawingBufferHeight
-    const u_drawingBufferWidth = gl.drawingBufferWidth
-
-    // this.uniformMap['u_drawingBufferHeight'] = [u_drawingBufferHeight]
-    // this.uniformMap['u_drawingBufferWidth'] = [u_drawingBufferWidth]
-    const u_aspect = u_drawingBufferWidth / u_drawingBufferHeight
-    this.uniformMap['u_aspect'] = [u_aspect]
   }
 
   update(uniformState: UniformState) {
@@ -37,5 +29,6 @@ export default class UniformState {
     // Matrix4.multiply(viewMatrix, rotation, viewMatrix)
     this.uniformMap['u_projectionMatrix'] = Matrix4.toArray(projectionMatrix)
     this.uniformMap['u_viewMatrix'] = Matrix4.toArray(viewMatrix)
+    this.uniformMap['u_modelMatrix'] = Matrix4.toArray(Matrix4.IDENTITY)
   }
 }

@@ -4,14 +4,15 @@ import Cartesian3 from '../Core/Cartesian3'
 import defaultValue from '../Core/DefaultValue'
 import Ellipsoid from '../Core/Ellipsoid'
 import GeographicProjection from '../Core/GeographicProjection'
+import Matrix4 from '../Core/Matrix4'
 // import HeadingPitchRoll from '../Core/HeadingPitchRoll'
 // import Matrix3 from '../Core/Matrix3'
 // import Matrix4 from '../Core/Matrix4'
 import Context from '../Renderer/Context'
 import Camera from './Camera'
 import FrameState from './FrameState'
-import Geometry from './Geometry'
-import GeometryAttribute from './GeometryAttribute'
+import Geometry from '../Core/Geometry'
+import GeometryAttribute from '../Core/GeometryAttribute'
 import Globe from './Globe'
 import ScreenSpaceCameraController from './ScreenSpaceCameraController'
 import ScreenSpaceCameraControllerForEditor from './ScreenSpaceCameraControllerForEditor'
@@ -226,7 +227,8 @@ export default class Scene {
         // Bottom face
         0, 1, 5, 0, 5, 4
       ]),
-      primitiveType: PrimitiveType.TRIANGLES
+      primitiveType: PrimitiveType.TRIANGLES,
+      modelMatrix: Matrix4.IDENTITY
     })
     this.camera.update(this.mode)
     const { uniformState } = this._context
