@@ -1,6 +1,6 @@
 import { ContextOptions, ContextType } from '../../type';
 import ShaderProgram from './ShaderProgram';
-import Geometry from '../Scene/Geometry';
+import Geometry from '../Core/Geometry';
 import UniformState from './UniformState';
 export default class Context {
     private _canvas;

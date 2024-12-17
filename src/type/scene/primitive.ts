@@ -7,3 +7,5 @@ export enum PrimitiveType {
   TRIANGLE_STRIP = WebGLRenderingContext.TRIANGLE_STRIP,
   TRIANGLE_FAN = WebGLRenderingContext.TRIANGLE_FAN
 }
+
+export interface PrimitiveOptions {}

@@ -7,3 +7,5 @@ export declare enum PrimitiveType {
     TRIANGLE_STRIP,
     TRIANGLE_FAN
 }
+export interface PrimitiveOptions {
+}

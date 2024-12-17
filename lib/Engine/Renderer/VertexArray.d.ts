@@ -1,7 +1,7 @@
 import { VertexArrayOptions, ContextType } from '../../type';
 import Context from './Context';
 import Buffer from './Buffer';
-import Geometry from '../Scene/Geometry';
+import Geometry from '../Core/Geometry';
 export default class VertexArray {
     context: Context;
     geometry: Geometry;

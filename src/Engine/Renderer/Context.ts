@@ -4,7 +4,7 @@ import ShaderProgram from './ShaderProgram'
 import VertexShaderSource from '../../Shaders/vertex'
 import FragmentShaderSource from '../../Shaders/fragment'
 import VertexArray from './VertexArray'
-import Geometry from '../Scene/Geometry'
+import Geometry from '../Core/Geometry'
 import UniformState from './UniformState'
 
 export default class Context {
