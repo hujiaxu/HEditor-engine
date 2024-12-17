@@ -4,12 +4,12 @@ import { defined } from './Defined'
 import Matrix4 from './Matrix4'
 
 export default class PerspectiveOffCenterFrustum {
-  private _left: number
-  private _right: number
-  private _top: number
-  private _bottom: number
-  private _near: number
-  private _far: number
+  private _left: number = 0.0
+  private _right: number = 0.0
+  private _top: number = 0.0
+  private _bottom: number = 0.0
+  private _near: number = 0.0
+  private _far: number = 0.0
 
   private _projectionMatrix: Matrix4
 
@@ -18,50 +18,12 @@ export default class PerspectiveOffCenterFrustum {
     return this._projectionMatrix
   }
 
-  get left() {
-    return this._left
-  }
-
-  set left(value: number) {
-    this._left = value
-  }
-
-  get right() {
-    return this._right
-  }
-
-  set right(value: number) {
-    this._right = value
-  }
-  get top() {
-    return this._top
-  }
-
-  set top(value: number) {
-    this._top = value
-  }
-  get bottom() {
-    return this._bottom
-  }
-
-  set bottom(value: number) {
-    this._bottom = value
-  }
-  get near() {
-    return this._near
-  }
-
-  set near(value: number) {
-    this._near = value
-  }
-
-  get far() {
-    return this._far
-  }
-
-  set far(value: number) {
-    this._far = value
-  }
+  public left: number = 0.0
+  public right: number = 0.0
+  public top: number = 0.0
+  public bottom: number = 0.0
+  public near: number = 0.0
+  public far: number = 0.0
 
   constructor({
     left,
@@ -135,12 +97,12 @@ export default class PerspectiveOffCenterFrustum {
   }
 
   private _update(offCenterFrustum: PerspectiveOffCenterFrustum) {
-    this.left = offCenterFrustum.left
-    this.right = offCenterFrustum.right
-    this.top = offCenterFrustum.top
-    this.bottom = offCenterFrustum.bottom
-    this.near = offCenterFrustum.near
-    this.far = offCenterFrustum.far
+    this._left = offCenterFrustum.left
+    this._right = offCenterFrustum.right
+    this._top = offCenterFrustum.top
+    this._bottom = offCenterFrustum.bottom
+    this._near = offCenterFrustum.near
+    this._far = offCenterFrustum.far
     this._projectionMatrix = Matrix4.computePerspectiveOffCenter(
       this.left,
       this.right,

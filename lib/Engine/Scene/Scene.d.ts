@@ -7,6 +7,7 @@ import Camera from './Camera';
 import FrameState from './FrameState';
 import Globe from './Globe';
 import ScreenSpaceCameraController from './ScreenSpaceCameraController';
+import ScreenSpaceCameraControllerForEditor from './ScreenSpaceCameraControllerForEditor';
 export default class Scene {
     canvas: HTMLCanvasElement;
     isUseGPU: boolean;
@@ -20,6 +21,7 @@ export default class Scene {
     private _screenSpaceCameraController;
     private _screenSpaceCameraControllerForEditor;
     get screenSpaceCameraController(): ScreenSpaceCameraController;
+    get screenSpaceCameraControllerForEditor(): ScreenSpaceCameraControllerForEditor;
     get mapProjection(): GeographicProjection;
     get ellipsoid(): Ellipsoid;
     get drawingBufferWidth(): number;

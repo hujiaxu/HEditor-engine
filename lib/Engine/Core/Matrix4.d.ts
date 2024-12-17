@@ -30,6 +30,7 @@ export default class Matrix4 {
     static inverseTransformation: (matrix: Matrix4, result?: Matrix4) => Matrix4;
     static multiplyByVector: (matrix: Matrix4, cartesian: Cartesian4, result?: Cartesian4) => Cartesian4;
     static computeViewportTransformation: (viewport: BoundingRectangle, nearDepthRange: number, farDepthRange: number, result?: Matrix4) => Matrix4;
+    static transpose: (matrix: Matrix4, result?: Matrix4) => Matrix4;
     get values(): number[];
     set values(values: number[]);
     constructor(column0Row0?: number, column1Row0?: number, column2Row0?: number, column3Row0?: number, column0Row1?: number, column1Row1?: number, column2Row1?: number, column3Row1?: number, column0Row2?: number, column1Row2?: number, column2Row2?: number, column3Row2?: number, column0Row3?: number, column1Row3?: number, column2Row3?: number, column3Row3?: number);

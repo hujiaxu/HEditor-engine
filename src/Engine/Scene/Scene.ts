@@ -4,6 +4,9 @@ import Cartesian3 from '../Core/Cartesian3'
 import defaultValue from '../Core/DefaultValue'
 import Ellipsoid from '../Core/Ellipsoid'
 import GeographicProjection from '../Core/GeographicProjection'
+// import HeadingPitchRoll from '../Core/HeadingPitchRoll'
+// import Matrix3 from '../Core/Matrix3'
+// import Matrix4 from '../Core/Matrix4'
 import Context from '../Renderer/Context'
 import Camera from './Camera'
 import FrameState from './FrameState'
@@ -30,6 +33,9 @@ export default class Scene {
 
   get screenSpaceCameraController() {
     return this._screenSpaceCameraController
+  }
+  get screenSpaceCameraControllerForEditor() {
+    return this._screenSpaceCameraControllerForEditor
   }
   get mapProjection() {
     return this._mapProjection
@@ -88,6 +94,15 @@ export default class Scene {
     this.camera = new Camera(this)
     this.globe = new Globe(this._ellipsoid)
 
+    // const scale = Matrix4.fromScale(new Cartesian3(0.5, 0.5, 0.5))
+    // const scratchMatrix = Matrix4.multiply(scale, this.camera.viewMatrix)
+    // const rotation = Matrix4.fromRotation(
+    //   Matrix3.fromHeadingPitchRoll(new HeadingPitchRoll(0, 0.0, 0.0))
+    // )
+    // Matrix4.multiply(scratchMatrix, rotation, scratchMatrix)
+    // const translation = Matrix4.fromTranslation(new Cartesian3(0.3, 0.3, 0.0))
+    // Matrix4.multiply(translation, scratchMatrix, this.camera.viewMatrix)
+    // console.log(this.camera.viewMatrix.values, 'this.camera.viewMatrix')
     this._screenSpaceCameraController = new ScreenSpaceCameraController(this)
     this._screenSpaceCameraControllerForEditor =
       new ScreenSpaceCameraControllerForEditor(this)
@@ -105,23 +120,115 @@ export default class Scene {
     const geometry = new Geometry({
       attributes: {
         position: new GeometryAttribute({
-          componentsPerAttribute: 2,
+          componentsPerAttribute: 3,
           componentDatatype: ComponentDatatype.FLOAT,
-          values: [0.5, 0.5, 0.5, -0.5, -0.5, -0.5, -0.5, 0.5]
+          values: [
+            // Front face
+            // v1
+            -0.5, -0.5, 0.5,
+            // v2
+            0.5, -0.5, 0.5,
+            // v3
+            0.5, 0.5, 0.5,
+            // v4
+            -0.5, 0.5, 0.5,
+
+            // Back face
+            // v5
+            -0.5, -0.5, -0.5,
+            // v6
+            0.5, -0.5, -0.5,
+            // v7
+            0.5, 0.5, -0.5,
+            // v8
+            -0.5, 0.5, -0.5,
+
+            // Left face
+            -0.5, -0.5, -0.5,
+            // v9
+            -0.5, -0.5, 0.5,
+            // v10
+            -0.5, 0.5, 0.5,
+            // v11
+            -0.5, 0.5, -0.5,
+
+            // Right face
+            // v12
+            0.5, -0.5, -0.5,
+            // v13
+            0.5, -0.5, 0.5,
+            // v14
+            0.5, 0.5, 0.5,
+            // v15
+            0.5, 0.5, -0.5,
+
+            // Top face
+            // v16
+            -0.5, 0.5, -0.5,
+            // v17
+            0.5, 0.5, -0.5,
+            // v18
+            0.5, 0.5, 0.5,
+            // v19
+            -0.5, 0.5, 0.5,
+
+            // Bottom face
+            // v20
+            -0.5, -0.5, -0.5,
+            // v21
+            0.5, -0.5, -0.5,
+            // v22
+            0.5, -0.5, 0.5,
+            // v23
+            -0.5, -0.5, 0.5
+          ]
         }),
         color: new GeometryAttribute({
           values: [
-            1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0,
-            0.0, 0.0, 1.0
+            1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0,
+            1.0, 0.0, 1.0,
+
+            1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0,
+            1.0, 0.0, 1.0,
+
+            1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0,
+            1.0, 0.0, 1.0,
+
+            1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0,
+            1.0, 0.0, 1.0,
+
+            1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0,
+            1.0, 0.0, 1.0,
+
+            1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0,
+            1.0, 0.0, 1.0
           ],
           componentsPerAttribute: 4,
           componentDatatype: ComponentDatatype.FLOAT
         })
       },
-      indices: new Uint16Array([0, 1, 2, 0, 2, 3]),
+      indices: new Uint16Array([
+        // Front face
+        4, 5, 6, 4, 6, 7,
+
+        // Back face
+        0, 3, 2, 0, 2, 1,
+
+        // Left face
+        0, 7, 3, 0, 4, 7,
+
+        // Right face
+        1, 2, 6, 1, 6, 5,
+
+        // Top face
+        3, 2, 6, 3, 6, 7,
+
+        // Bottom face
+        0, 1, 5, 0, 5, 4
+      ]),
       primitiveType: PrimitiveType.TRIANGLES
     })
-
+    this.camera.update(this.mode)
     const { uniformState } = this._context
     uniformState.updateCamera(this.camera)
     this._context.draw({

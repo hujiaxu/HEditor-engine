@@ -9,9 +9,10 @@ export default class ScreenSpaceCameraControllerForEditor {
     enableLook: boolean;
     inertiaSpin: number;
     inertiaTranslate: number;
-    inertiaZoom: number;
     maximumMovementRatio: number;
     bounceAnimationTime: number;
+    inertiaZoom: number;
+    private _zoomFactor;
     minimumZoomDistance: number;
     maximumZoomDistance: number;
     translateEventTypes: CameraEventType;
@@ -33,7 +34,16 @@ export default class ScreenSpaceCameraControllerForEditor {
     private _lastInertiaTiltMovement;
     private _inertiaDisablers;
     private _rotateMousePosition;
+    private _rotateFactor;
+    private _rotateRateRangeAdjustment;
+    private _maximumRotateRate;
+    private _minimumRotateRate;
+    private _horizontalRotationAxis;
+    private _tiltCenterMousePosition;
+    private _tiltOnEllipsoid;
+    private _looking;
     private _scene;
+    private _ellipsoid;
     get scene(): Scene;
     constructor(scene: Scene);
     update(): void;
@@ -41,6 +51,7 @@ export default class ScreenSpaceCameraControllerForEditor {
     private _activateInertia;
     private _maintainInertia;
     private _update3D;
+    private _translate3D;
     private _spin3D;
     private _zoom3D;
     private _tilt3D;

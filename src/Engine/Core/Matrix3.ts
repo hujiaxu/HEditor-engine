@@ -1,4 +1,5 @@
 import Cartesian3 from './Cartesian3'
+import HeadingPitchRoll from './HeadingPitchRoll'
 import Quaternion from './Quaternion'
 
 export default class Matrix3 {
@@ -29,6 +30,10 @@ export default class Matrix3 {
     index: number,
     result?: Cartesian3
   ) => Cartesian3
+  static fromHeadingPitchRoll: (
+    headingPitchRoll: HeadingPitchRoll,
+    result?: Matrix3
+  ) => Matrix3
 
   get values() {
     return this._values
@@ -132,16 +137,16 @@ Matrix3.multiplyByVector = (
   ]
 */
 Matrix3.fromQuaternion = (quaternion: Quaternion, result?: Matrix3) => {
-  const x2 = quaternion.x + quaternion.x
+  const x2 = quaternion.x * quaternion.x
   const xy = quaternion.x * quaternion.y
   const xz = quaternion.x * quaternion.z
   const xw = quaternion.x * quaternion.w
-  const y2 = quaternion.y + quaternion.y
+  const y2 = quaternion.y * quaternion.y
   const yz = quaternion.y * quaternion.z
   const yw = quaternion.y * quaternion.w
-  const z2 = quaternion.z + quaternion.z
+  const z2 = quaternion.z * quaternion.z
   const zw = quaternion.z * quaternion.w
-  const w2 = quaternion.w + quaternion.w
+  const w2 = quaternion.w * quaternion.w
 
   const m00 = x2 - y2 - z2 + w2
   const m01 = 2.0 * (xy - zw)
@@ -152,7 +157,7 @@ Matrix3.fromQuaternion = (quaternion: Quaternion, result?: Matrix3) => {
   const m12 = 2.0 * (yz - xw)
 
   const m20 = 2.0 * (xz - yw)
-  const m21 = 2.0 * (yw + xz)
+  const m21 = 2.0 * (yz + xw)
   const m22 = -x2 - y2 + z2 + w2
 
   if (!result) {
@@ -281,5 +286,44 @@ Matrix3.getColumn = (
   result.x = x
   result.y = y
   result.z = z
+  return result
+}
+Matrix3.fromHeadingPitchRoll = (
+  headingPitchRoll: HeadingPitchRoll,
+  result?: Matrix3
+) => {
+  if (!result) {
+    result = new Matrix3()
+  }
+
+  const cosTheta = Math.cos(-headingPitchRoll.pitch)
+  const cosPsi = Math.cos(-headingPitchRoll.heading)
+  const cosPhi = Math.cos(headingPitchRoll.roll)
+  const sinTheta = Math.sin(-headingPitchRoll.pitch)
+  const sinPsi = Math.sin(-headingPitchRoll.heading)
+  const sinPhi = Math.sin(headingPitchRoll.roll)
+
+  const m00 = cosTheta * cosPsi
+  const m01 = -cosPhi * sinPsi + sinPhi * sinTheta * cosPsi
+  const m02 = sinPhi * sinPsi + cosPhi * sinTheta * cosPsi
+
+  const m10 = cosTheta * sinPsi
+  const m11 = cosPhi * cosPsi + sinPhi * sinTheta * sinPsi
+  const m12 = -sinPhi * cosPsi + cosPhi * sinTheta * sinPsi
+
+  const m20 = -sinTheta
+  const m21 = sinPhi * cosTheta
+  const m22 = cosPhi * cosTheta
+
+  result.values[0] = m00
+  result.values[1] = m10
+  result.values[2] = m20
+  result.values[3] = m01
+  result.values[4] = m11
+  result.values[5] = m21
+  result.values[6] = m02
+  result.values[7] = m12
+  result.values[8] = m22
+
   return result
 }

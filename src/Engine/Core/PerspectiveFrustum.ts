@@ -3,43 +3,23 @@ import Cartesian2 from './Cartesian2'
 import PerspectiveOffCenterFrustum from './PerspectiveOffCenterFrustum'
 
 export default class PerspectiveFrustum {
-  private _fov: number
-  private _fovy: number
-  private _aspectRatio: number
-  private _near: number
-  private _far: number
-  private _xOffset: number
-  private _yOffset: number
+  private _fov: number = 0.0
+  private _fovy: number = 0.0
+  private _aspectRatio: number = 0.0
+  private _near: number = 0.0
+  private _far: number = 0.0
+  private _xOffset: number = 0.0
+  private _yOffset: number = 0.0
 
   private _offCenterFrustum!: PerspectiveOffCenterFrustum
 
-  get fov() {
-    return this._fov
-  }
-
-  get fovy() {
-    return this._fovy
-  }
-
-  get aspectRatio() {
-    return this._aspectRatio
-  }
-
-  get near() {
-    return this._near
-  }
-
-  get far() {
-    return this._far
-  }
-
-  get xOffset() {
-    return this._xOffset
-  }
-
-  get yOffset() {
-    return this._yOffset
-  }
+  public fov: number = 0.0
+  public fovy: number = 0.0
+  public aspectRatio: number = 0.0
+  public near: number = 0.0
+  public far: number = 0.0
+  public xOffset: number = 0.0
+  public yOffset: number = 0.0
 
   get offCenterFrustum() {
     return this._offCenterFrustum
@@ -53,26 +33,21 @@ export default class PerspectiveFrustum {
     xOffset,
     yOffset
   }: PerspectiveFrustumOptions) {
-    this._fov = fov
-    this._fovy = fov
-    this._aspectRatio = aspectRatio
-    this._near = near
-    this._far = far
-    this._xOffset = xOffset || 0
-    this._yOffset = yOffset || 0
-
-    const top = Math.tan(this._fov * 0.5)
-    const bottom = -top
-    const right = this._aspectRatio * top
-    const left = -right
+    this.fov = fov
+    this.fovy = fov
+    this.aspectRatio = aspectRatio
+    this.near = near
+    this.far = far
+    this.xOffset = xOffset || 0
+    this.yOffset = yOffset || 0
 
     this._offCenterFrustum = new PerspectiveOffCenterFrustum({
-      left,
-      right,
-      top,
-      bottom,
-      near: this._near,
-      far: this._far
+      left: 0,
+      right: 0,
+      top: 0,
+      bottom: 0,
+      near,
+      far
     })
   }
 
@@ -102,45 +77,45 @@ export default class PerspectiveFrustum {
     const offCenterFrustum = this._offCenterFrustum
 
     if (
-      frustum._aspectRatio !== this._aspectRatio ||
-      frustum._fov !== this._fov ||
-      frustum._near !== this._near ||
-      frustum._far !== this._far ||
-      frustum._xOffset !== this._xOffset ||
-      frustum._yOffset !== this._yOffset
+      frustum.aspectRatio !== this._aspectRatio ||
+      frustum.fov !== this._fov ||
+      frustum.near !== this._near ||
+      frustum.far !== this._far ||
+      frustum.xOffset !== this._xOffset ||
+      frustum.yOffset !== this._yOffset
     ) {
-      if (frustum._fov < 0 || frustum._fov >= Math.PI) {
+      if (frustum.fov < 0 || frustum.fov >= Math.PI) {
         throw new Error('fov must be in the range [0, PI)')
       }
-      if (frustum._aspectRatio < 0) {
+      if (frustum.aspectRatio < 0) {
         throw new Error('aspect must be greater than 0')
       }
-      if (frustum._near < 0 || frustum._near > frustum._far) {
+      if (frustum.near < 0 || frustum.near > frustum.far) {
         throw new Error('near must be in the range [0, far]')
       }
 
-      this._aspectRatio = frustum._aspectRatio
-      this._fov = frustum._fov
+      this._aspectRatio = frustum.aspectRatio
+      this._fov = frustum.fov
       this._fovy =
         frustum._aspectRatio <= 1
-          ? frustum._fov
-          : Math.atan(Math.tan(frustum._fov * 0.5) / frustum._aspectRatio) * 2.0
-      this._near = frustum._near
-      this._far = frustum._far
-      this._xOffset = frustum._xOffset
-      this._yOffset = frustum._yOffset
+          ? frustum.fov
+          : Math.atan(Math.tan(frustum.fov * 0.5) / frustum.aspectRatio) * 2.0
+      this._near = frustum.near
+      this._far = frustum.far
+      this._xOffset = frustum.xOffset
+      this._yOffset = frustum.yOffset
 
-      offCenterFrustum.top = Math.tan(this._fovy * 0.5) * this._near
+      offCenterFrustum.top = Math.tan(this._fovy * 0.5) * this.near
       offCenterFrustum.bottom = -offCenterFrustum.top
-      offCenterFrustum.right = this._aspectRatio * offCenterFrustum.top
+      offCenterFrustum.right = this.aspectRatio * offCenterFrustum.top
       offCenterFrustum.left = -offCenterFrustum.right
-      offCenterFrustum.near = this._near
-      offCenterFrustum.far = this._far
+      offCenterFrustum.near = this.near
+      offCenterFrustum.far = this.far
 
-      offCenterFrustum.right += this._xOffset
-      offCenterFrustum.left -= this._xOffset
-      offCenterFrustum.top += this._yOffset
-      offCenterFrustum.bottom -= this._yOffset
+      offCenterFrustum.right += this.xOffset
+      offCenterFrustum.left -= this.xOffset
+      offCenterFrustum.top += this.yOffset
+      offCenterFrustum.bottom -= this.yOffset
     }
   }
 }

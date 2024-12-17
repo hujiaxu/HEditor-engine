@@ -26,4 +26,5 @@ export default class CameraEventAggregator {
     getButtonPressTime(type: CameraEventType, modifier: KeyboardEventModifier | undefined): Date;
     getButtonReleaseTime(type: CameraEventType, modifier: KeyboardEventModifier | undefined): Date;
     isButtonDown(type: CameraEventType, modifier: KeyboardEventModifier | undefined): boolean;
+    reset(): void;
 }

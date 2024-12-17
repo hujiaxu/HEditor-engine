@@ -133,7 +133,7 @@ export default class ScreenSpaceEventHandler {
   private _registerListeners(handler: ScreenSpaceEventHandler) {
     const element = handler._element
 
-    if (FeatureDetection.supportsPointerEvents()) {
+    if (!FeatureDetection.supportsPointerEvents()) {
       this._registerListener(
         handler,
         'pointerdown',

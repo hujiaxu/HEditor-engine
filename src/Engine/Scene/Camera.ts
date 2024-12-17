@@ -32,11 +32,11 @@ const defaultRF = {
   up: new Cartesian3()
 }
 export default class Camera {
-  public position: Cartesian3 = new Cartesian3(50, 50, 50)
-  public direction: Cartesian3 = new Cartesian3(0.0, -1.0, 1.0)
-  public up: Cartesian3 = new Cartesian3(0.0, 0.0, 1.0)
-  public right: Cartesian3 = new Cartesian3(1.0, 0.0, 0.0)
-  public constrainedAxis: Cartesian3 | undefined = undefined
+  public position: Cartesian3 = new Cartesian3(0.0, 0.0, -10)
+  public direction: Cartesian3 = new Cartesian3(0.0, 0.0, 0.5)
+  public up: Cartesian3 = new Cartesian3(0.0, 0.5, 0.0)
+  public right: Cartesian3 = new Cartesian3(0.5, 0.0, 0.0)
+  public constrainedAxis: Cartesian3 | undefined
 
   public positionWC: Cartesian3 = new Cartesian3()
   public directionWC: Cartesian3 = new Cartesian3()
@@ -52,15 +52,16 @@ export default class Camera {
   private _up: Cartesian3 = new Cartesian3()
   private _right: Cartesian3 = new Cartesian3()
   private _transform: Matrix4 = new Matrix4()
-  private _actualTransform: Matrix4 = new Matrix4()
-  private _actualInvTransform: Matrix4 = new Matrix4()
   private _transformChanged = false
   private _modeChanged = false
   private _defaultLookAmount: number = Math.PI / 60.0
   private _defaultRotateAmount: number = Math.PI / 3600.0
   private _defaultZoomAmount: number = 100000.0
 
-  private _viewMatrix: Matrix4 = new Matrix4()
+  private _actualTransform: Matrix4 = Matrix4.clone(Matrix4.IDENTITY)
+  private _actualInvTransform: Matrix4 = Matrix4.clone(Matrix4.IDENTITY)
+  private _viewMatrix: Matrix4 = Matrix4.clone(Matrix4.IDENTITY)
+  private _invViewMatrix: Matrix4 = Matrix4.clone(Matrix4.IDENTITY)
 
   scene: Scene
   private _projection: GeographicProjection
@@ -70,9 +71,11 @@ export default class Camera {
   heading: number = 0.0
   pitch: number = -HEditorMath.PI_OVER_TWO
   roll: number = 0.0
+  static DEFAULT_VIEW_RECTANGLE: Rectangle
 
   get viewMatrix() {
-    this.updateViewMatrix(this)
+    this._updateMembers()
+
     return this._viewMatrix
   }
   get transform() {
@@ -87,12 +90,11 @@ export default class Camera {
 
   constructor(scene: Scene) {
     this.scene = scene
-    this.constrainedAxis = Cartesian3.ZERO
 
     const aspectRatio = scene.drawingBufferWidth / scene.drawingBufferHeight
-    const fov = HEditorMath.toRadians(60.0)
+    const fov = HEditorMath.toRadians(65.0)
     const near = 0.1
-    const far = 1000
+    const far = 10000
     this.frustum = new PerspectiveFrustum({
       fov,
       aspectRatio,
@@ -103,33 +105,45 @@ export default class Camera {
     const projection = scene.mapProjection
     this._projection = projection
 
+    this.updateViewMatrix(this)
     this._maxCoord = projection.project(
       new Cartographic(Math.PI, HEditorMath.PI_OVER_TWO)
     )
     this._positionCartographic = new Cartographic()
     this._mode = SceneMode.SCENE3D
+
+    // this._rectangleCameraPosition3D(
+    //   Camera.DEFAULT_VIEW_RECTANGLE,
+    //   this.position,
+    //   true
+    // )
   }
 
+  public update(mode: SceneMode) {
+    if (this._mode !== mode) {
+      this._mode = mode
+    }
+  }
   private _updateMembers() {
-    let position = this.position
-    const positionChanged = !Cartesian3.equals(this.position, this._position)
+    let position = this._position
+    const positionChanged = !Cartesian3.equals(this.position, position)
     if (positionChanged) {
       position = Cartesian3.clone(this.position, this._position)
     }
-    let direction = this.direction
-    const directionChanged = !Cartesian3.equals(this.direction, this._direction)
+    let direction = this._direction
+    const directionChanged = !Cartesian3.equals(this.direction, direction)
     if (directionChanged) {
       Cartesian3.normalize(this.direction, this.direction)
       direction = Cartesian3.clone(this.direction, this._direction)
     }
-    let up = this.up
-    const upChanged = !Cartesian3.equals(this.up, this._up)
+    let up = this._up
+    const upChanged = !Cartesian3.equals(this.up, up)
     if (upChanged) {
       Cartesian3.normalize(this.up, this.up)
       up = Cartesian3.clone(this.up, this._up)
     }
-    let right = this.right
-    const rightChanged = !Cartesian3.equals(this.right, this._right)
+    let right = this._right
+    const rightChanged = !Cartesian3.equals(this.right, right)
     if (rightChanged) {
       Cartesian3.normalize(this.right, this.right)
       right = Cartesian3.clone(this.right, this._right)
@@ -146,6 +160,8 @@ export default class Camera {
         this._actualTransform,
         this._actualInvTransform
       )
+
+      this._modeChanged = false
     }
 
     const transform = this._actualTransform
@@ -235,12 +251,19 @@ export default class Camera {
       this._calculateOrthographicFrustumWidth() || this.frustum.width
   }
   public updateViewMatrix(camera: Camera) {
-    this._viewMatrix = Matrix4.computeView(
-      camera.position,
-      camera.direction,
-      camera.up,
-      camera.right
+    Matrix4.computeView(
+      camera._position,
+      camera._direction,
+      camera._up,
+      camera._right,
+      this._viewMatrix
     )
+    Matrix4.multiply(
+      this._viewMatrix,
+      this._actualInvTransform,
+      this._viewMatrix
+    )
+    Matrix4.inverseTransformation(this._viewMatrix, this._invViewMatrix)
   }
 
   public getPickRay(windowPos: Cartesian2, result?: Ray) {
@@ -904,6 +927,30 @@ export default class Camera {
     this._clampMove2D(cameraPosition)
     this._adjustOrthographicFrustum(true)
   }
+  public moveForward(amount?: number) {
+    amount = defaultValue(amount, this._defaultZoomAmount)
+    this.move(this.direction, amount)
+  }
+  public moveBackward(amount?: number) {
+    amount = defaultValue(amount, this._defaultZoomAmount)
+    this.move(this.direction, -amount)
+  }
+  public moveRight(amount?: number) {
+    amount = defaultValue(amount, this._defaultZoomAmount)
+    this.move(this.right, amount)
+  }
+  public moveLeft(amount?: number) {
+    amount = defaultValue(amount, this._defaultZoomAmount)
+    this.move(this.right, -amount)
+  }
+  public moveUp(amount?: number) {
+    amount = defaultValue(amount, this._defaultZoomAmount)
+    this.move(this.up, amount)
+  }
+  public moveDown(amount?: number) {
+    amount = defaultValue(amount, this._defaultZoomAmount)
+    this.move(this.up, -amount)
+  }
 
   private _rotateVertical(angle: number) {
     const position = this.position
@@ -1012,3 +1059,4 @@ export default class Camera {
     this._zoom3D(-amount)
   }
 }
+Camera.DEFAULT_VIEW_RECTANGLE = Rectangle.fromDegrees(-95.0, -20.0, -70.0, 90.0)

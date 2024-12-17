@@ -313,10 +313,13 @@ export default class CameraEventAggregator {
                   (movement[key] as Movement).endPosition
                 )
               } else {
-                const move = movement[key] as Movement
+                this._cloneMovement(
+                  movement[key] as Movement,
+                  lastMovement[key] as Movement
+                )
                 const lastMove = lastMovement[key] as Movement
                 lastMove.valid = true
-                this._cloneMovement(move, lastMove)
+                this._cloneMovement(mouseMovement, movement[key] as Movement)
                 update[key] = false
               }
             }
@@ -450,5 +453,11 @@ export default class CameraEventAggregator {
     const key = getKey(type, modifier)
 
     return this._isDown[key]
+  }
+
+  public reset() {
+    for (const name in this._update) {
+      this._update[name] = true
+    }
   }
 }

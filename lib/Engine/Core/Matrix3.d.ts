@@ -1,4 +1,5 @@
 import Cartesian3 from './Cartesian3';
+import HeadingPitchRoll from './HeadingPitchRoll';
 import Quaternion from './Quaternion';
 export default class Matrix3 {
     private _values;
@@ -20,6 +21,7 @@ export default class Matrix3 {
     static COLUMN1ROW2: number;
     static COLUMN2ROW2: number;
     static getColumn: (m: Matrix3, index: number, result?: Cartesian3) => Cartesian3;
+    static fromHeadingPitchRoll: (headingPitchRoll: HeadingPitchRoll, result?: Matrix3) => Matrix3;
     get values(): number[];
     set values(values: number[]);
     constructor(column0Row0?: number, column1Row0?: number, column2Row0?: number, column0Row1?: number, column1Row1?: number, column2Row1?: number, column0Row2?: number, column1Row2?: number, column2Row2?: number);

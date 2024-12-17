@@ -96,6 +96,7 @@ export default class Matrix4 {
     farDepthRange: number,
     result?: Matrix4
   ) => Matrix4
+  static transpose: (matrix: Matrix4, result?: Matrix4) => Matrix4
 
   get values() {
     return this._values
@@ -460,6 +461,7 @@ Matrix4.computeView = function (
   if (!result) {
     result = new Matrix4()
   }
+  // console.log(position, direction, up, right)
   result.setValue(0, right.x)
   result.setValue(1, up.x)
   result.setValue(2, -direction.x)
@@ -776,5 +778,27 @@ Matrix4.computeViewportTransformation = function (
   result.values[13] = column3Row1
   result.values[14] = column3Row2
   result.values[15] = column3Row3
+  return result
+}
+Matrix4.transpose = function (matrix: Matrix4, result?: Matrix4) {
+  if (!result) {
+    result = new Matrix4()
+  }
+  result.values[0] = matrix.values[0]
+  result.values[1] = matrix.values[4]
+  result.values[2] = matrix.values[8]
+  result.values[3] = matrix.values[12]
+  result.values[4] = matrix.values[1]
+  result.values[5] = matrix.values[5]
+  result.values[6] = matrix.values[9]
+  result.values[7] = matrix.values[13]
+  result.values[8] = matrix.values[2]
+  result.values[9] = matrix.values[6]
+  result.values[10] = matrix.values[10]
+  result.values[11] = matrix.values[14]
+  result.values[12] = matrix.values[3]
+  result.values[13] = matrix.values[7]
+  result.values[14] = matrix.values[11]
+  result.values[15] = matrix.values[15]
   return result
 }

@@ -120,7 +120,7 @@ export default class Context {
 
     context.gl.clearColor(0, 0, 0, 0)
     context.gl.clear(context.gl.COLOR_BUFFER_BIT | context.gl.DEPTH_BUFFER_BIT)
-
+    context.gl.enable(context.gl.DEPTH_TEST)
     const shaderProgram = new ShaderProgram({
       gl: context.gl,
       vertexShaderSource: VertexShaderSource,
@@ -153,9 +153,11 @@ export default class Context {
       context.gl.drawingBufferHeight
     )
 
+    const count = geometry.indices.length
+
     context.gl.drawElements(
       PrimitiveType.TRIANGLES,
-      6,
+      count,
       context.gl.UNSIGNED_SHORT,
       0
     )

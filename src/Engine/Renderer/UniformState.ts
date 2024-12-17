@@ -1,4 +1,6 @@
 import { ContextType, UniformStateOptions } from '../../type'
+// import HeadingPitchRoll from '../Core/HeadingPitchRoll'
+// import Matrix3 from '../Core/Matrix3'
 import Matrix4 from '../Core/Matrix4'
 import Camera from '../Scene/Camera'
 
@@ -29,6 +31,10 @@ export default class UniformState {
     const projectionMatrix = camera.frustum.projectionMatrix
     const viewMatrix = camera.viewMatrix
 
+    // const rotation = Matrix4.fromRotation(
+    //   Matrix3.fromHeadingPitchRoll(new HeadingPitchRoll(0.01, 0.01, 0.01))
+    // )
+    // Matrix4.multiply(viewMatrix, rotation, viewMatrix)
     this.uniformMap['u_projectionMatrix'] = Matrix4.toArray(projectionMatrix)
     this.uniformMap['u_viewMatrix'] = Matrix4.toArray(viewMatrix)
   }

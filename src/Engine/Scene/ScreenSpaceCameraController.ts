@@ -651,6 +651,7 @@ export default class ScreenSpaceCameraController {
 
     if (!rotateOnlyVertical) {
       camera.rotateLeft(deltaPhi)
+      console.log('deltaPhi: ', deltaPhi)
     }
 
     if (!rotateOnlyHorizontal) {
