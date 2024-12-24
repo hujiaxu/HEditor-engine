@@ -10,7 +10,7 @@ import {
   Update
 } from '../../type'
 import Cartesian2 from '../Core/Cartesian2'
-import { defined } from '../Core/Defined'
+import defined from '../Core/Defined'
 import HEditorMath from '../Core/Math'
 import ScreenSpaceEventHandler from './ScreenSpaceEventHandler'
 

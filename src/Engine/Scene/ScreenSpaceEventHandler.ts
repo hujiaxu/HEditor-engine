@@ -12,7 +12,7 @@ import {
 import AssociativeArray from '../Core/AssociativeArray'
 import Cartesian2 from '../Core/Cartesian2'
 import Cartesian3 from '../Core/Cartesian3'
-import { defined } from '../Core/Defined'
+import defined from '../Core/Defined'
 import FeatureDetection from '../Core/FeatureDetection'
 import getTimestamp from '../Core/GetTimestamp'
 

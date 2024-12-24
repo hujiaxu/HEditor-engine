@@ -1,4 +1,4 @@
-import { defined } from './Defined'
+import defined from './Defined'
 import HEditorMath from './Math'
 
 export default class Cartesian3 {

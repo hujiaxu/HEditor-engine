@@ -1,4 +1,4 @@
-import { defined } from './Defined'
+import defined from './Defined'
 
 export default class Cartographic {
   longitude: number

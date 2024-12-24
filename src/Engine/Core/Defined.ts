@@ -1,3 +1,3 @@
-export function defined<T>(value: T): value is NonNullable<T> {
+export default function Defined<T>(value: T): value is NonNullable<T> {
   return value !== undefined && value !== null
 }

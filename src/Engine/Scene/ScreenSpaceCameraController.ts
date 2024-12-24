@@ -15,7 +15,7 @@ import Cartesian3 from '../Core/Cartesian3'
 import Cartesian4 from '../Core/Cartesian4'
 import Cartographic from '../Core/Cartographic'
 import defaultValue from '../Core/DefaultValue'
-import { defined } from '../Core/Defined'
+import defined from '../Core/Defined'
 import Ellipsoid from '../Core/Ellipsoid'
 import IntersectionTests from '../Core/IntersectionTests'
 import HEditorMath from '../Core/Math'
@@ -715,7 +715,7 @@ export default class ScreenSpaceCameraController {
           distanceToNearPlane,
           scene.pixelRatio,
           pan3DPixelDimentions
-        )
+        )!
 
         const dragDelta = Cartesian2.subtract(
           endMousePosition,

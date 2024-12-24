@@ -8,5 +8,5 @@ export default class Globe {
     get ellipsoid(): Ellipsoid;
     get terrainProvider(): EllipsoidTerrainProvider;
     constructor(ellipsoid: Ellipsoid);
-    pickWorldCoordinates(ray: Ray, scene: Scene, cameraUnderground: boolean): import("../Core/Cartesian3").default;
+    pickWorldCoordinates(ray: Ray, scene: Scene, cameraUnderground: boolean): import("..").Cartesian3;
 }

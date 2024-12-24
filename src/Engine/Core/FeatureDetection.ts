@@ -1,4 +1,4 @@
-import { defined } from './Defined'
+import defined from './Defined'
 
 interface Navigator {
   userAgent: string

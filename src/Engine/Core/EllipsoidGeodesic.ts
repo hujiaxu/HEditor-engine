@@ -1,7 +1,7 @@
 import Cartesian3 from './Cartesian3'
 import Cartographic from './Cartographic'
 import defaultValue from './DefaultValue'
-import { defined } from './Defined'
+import defined from './Defined'
 import Ellipsoid from './Ellipsoid'
 import HEditorMath from './Math'
 

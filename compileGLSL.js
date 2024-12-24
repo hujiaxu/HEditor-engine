@@ -23,6 +23,5 @@ fs.readdirSync(glslDir).forEach((file) => {
     const outputPath = path.join(outputDir, outputFileName)
 
     fs.writeFileSync(outputPath, tsContent)
-    console.log(`已生成 ${outputFileName}`)
   }
 })

@@ -12,7 +12,8 @@
     "prettier:comment": "自动格式化 src 目录下的所有 .ts 文件",
     "prettier": "prettier --write \"src/**/*.ts\"",
     "build:comment": "构建",
-    "watch": "nodemon --ignore dist/ --ignore node_modules/ --ignore src/Shaders --watch src/ -C -e js,jsx,ts,tsx,css,less --debug -x 'pnpm run build && yalc publish'",
+    "local": "npm run watch && node watcher.js",
+    "watch": "nodemon --ignore dist/ --ignore node_modules/ --ignore \"src/**/index.ts\" / --ignore \"src/Shaders/*.ts\" --watch src/ -C -e js,jsx,ts,tsx,css,less,glsl --debug -x 'node compileGLSL.js && pnpm run build'",
     "build": "node compileGLSL.js && npm run eslint && npm run prettier && rm -rf lib && tsc --build"
   },
   "keywords": [],
@@ -38,6 +39,10 @@
     ]
   },
   "dependencies": {
-    "@webgpu/types": "^0.1.51"
+    "@babel/parser": "^7.26.3",
+    "@babel/traverse": "^7.26.4",
+    "@babel/types": "^7.26.3",
+    "@webgpu/types": "^0.1.51",
+    "chokidar": "^4.0.3"
   }
 }

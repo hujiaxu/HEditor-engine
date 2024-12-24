@@ -1,6 +1,6 @@
 import { PerspectiveOffCenterFrustumOptions } from '../../type'
 import Cartesian2 from './Cartesian2'
-import { defined } from './Defined'
+import defined from './Defined'
 import Matrix4 from './Matrix4'
 
 export default class PerspectiveOffCenterFrustum {

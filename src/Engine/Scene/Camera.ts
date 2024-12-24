@@ -1,6 +1,6 @@
 import Cartesian2 from '../Core/Cartesian2'
 import Cartesian3 from '../Core/Cartesian3'
-import { defined } from '../Core/Defined'
+import defined from '../Core/Defined'
 import HEditorMath from '../Core/Math'
 import Matrix4 from '../Core/Matrix4'
 import Ray from '../Core/Ray'
@@ -108,7 +108,7 @@ export default class Camera {
     this.updateViewMatrix(this)
     this._maxCoord = projection.project(
       new Cartographic(Math.PI, HEditorMath.PI_OVER_TWO)
-    )
+    )!
     this._positionCartographic = new Cartographic()
     this._mode = SceneMode.SCENE3D
 

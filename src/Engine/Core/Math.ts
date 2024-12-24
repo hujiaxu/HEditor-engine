@@ -1,5 +1,5 @@
 import defaultValue from './DefaultValue'
-import { defined } from './Defined'
+import defined from './Defined'
 
 const HEditorMath = {
   PI: Math.PI,

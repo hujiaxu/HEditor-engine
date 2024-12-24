@@ -11,7 +11,7 @@ import {
 import Cartesian2 from '../Core/Cartesian2'
 import Cartesian3 from '../Core/Cartesian3'
 import defaultValue from '../Core/DefaultValue'
-import { defined } from '../Core/Defined'
+import defined from '../Core/Defined'
 import Ellipsoid from '../Core/Ellipsoid'
 import HEditorMath from '../Core/Math'
 import Matrix4 from '../Core/Matrix4'

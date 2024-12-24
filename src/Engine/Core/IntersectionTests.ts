@@ -1,6 +1,6 @@
 import Cartesian3 from './Cartesian3'
 import Cartographic from './Cartographic'
-import { defined } from './Defined'
+import defined from './Defined'
 import Ellipsoid from './Ellipsoid'
 import Interval from './Interval'
 import HEditorMath from './Math'
@@ -362,7 +362,7 @@ IntersectionTests.grazingAltitudeLocation = (
   const f = ellipsoid.transformPositionToScaledSpace(
     direction,
     firstAxisScratch
-  )
+  )!
 
   const firstAxis = Cartesian3.normalize(f, f)
   const reference = Cartesian3.mostOrthogonalAxis(f, referenceScratch)

@@ -1,4 +1,4 @@
-import { defined } from './Defined'
+import defined from './Defined'
 
 export default class Cartesian4 {
   x: number

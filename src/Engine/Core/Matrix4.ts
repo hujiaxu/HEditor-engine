@@ -2,7 +2,7 @@ import BoundingRectangle from './BoundingRectangle'
 import Cartesian3 from './Cartesian3'
 import Cartesian4 from './Cartesian4'
 import defaultValue from './DefaultValue'
-import { defined } from './Defined'
+import defined from './Defined'
 import Matrix3 from './Matrix3'
 
 export default class Matrix4 {

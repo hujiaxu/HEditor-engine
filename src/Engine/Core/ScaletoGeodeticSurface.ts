@@ -1,5 +1,5 @@
 import Cartesian3 from './Cartesian3'
-import { defined } from './Defined'
+import defined from './Defined'
 import HEditorMath from './Math'
 
 const scaleToGeodeticSurfaceIntersection = new Cartesian3()

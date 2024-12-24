@@ -1,6 +1,6 @@
 import Cartesian3 from './Cartesian3'
 import Cartographic from './Cartographic'
-import { defined } from './Defined'
+import defined from './Defined'
 import HEditorMath from './Math'
 import scaleToGeodeticSurface from './ScaletoGeodeticSurface'
 
