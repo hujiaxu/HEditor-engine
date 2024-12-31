@@ -2,6 +2,7 @@ import { PrimitiveOptions, PrimitiveState, PrimitiveType } from '../../type';
 import Cartesian3 from '../Core/Cartesian3';
 import Matrix4 from '../Core/Matrix4';
 import Appearance from './Appearance';
+import FrameState from './FrameState';
 import GeometryInstance from './GeometryInstance';
 import Material from './Material';
 export default class Primitive {
@@ -62,4 +63,5 @@ export default class Primitive {
     _batchTableBoundingSphereUpdated: boolean;
     _batchTableBoundingSphereAttributeIndices: undefined;
     constructor(options: PrimitiveOptions);
+    update(frameState: FrameState): void;
 }

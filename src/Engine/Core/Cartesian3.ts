@@ -82,6 +82,10 @@ export default class Cartesian3 {
     direction: Cartesian3,
     result?: Cartesian3
   ) => Cartesian3
+  static fromCartesian4: (
+    cartesian: Cartesian3,
+    result?: Cartesian3
+  ) => Cartesian3
   constructor(x?: number, y?: number, z?: number) {
     this.x = x || 0
     this.y = y || 0
@@ -362,3 +366,4 @@ Cartesian3.projectVector = function (
     Cartesian3.dot(cartesian, direction) / Cartesian3.dot(direction, direction)
   return Cartesian3.multiplyByScalar(direction, scalar, result)
 }
+Cartesian3.fromCartesian4 = Cartesian3.clone

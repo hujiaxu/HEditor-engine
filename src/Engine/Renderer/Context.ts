@@ -1,11 +1,21 @@
 import { getExtension } from '../../utils'
-import { ContextOptions, ContextType, PrimitiveType } from '../../type'
+import {
+  ContextOptions,
+  ContextType,
+  PickObject,
+  PickObjects,
+  PrimitiveType
+} from '../../type'
 import ShaderProgram from './ShaderProgram'
 import VertexShaderSource from '../../Shaders/vertex'
 import FragmentShaderSource from '../../Shaders/fragment'
 import VertexArray from './VertexArray'
 import Geometry from '../Core/Geometry'
 import UniformState from './UniformState'
+import Defined from '../Core/Defined'
+import Color from '../Core/Color'
+import PickId from '../Core/PickId'
+import ContextLimits from './ContextLimits'
 
 export default class Context {
   private _canvas: HTMLCanvasElement
@@ -24,12 +34,65 @@ export default class Context {
   glCreateVertexArray!: () => WebGLVertexArrayObject | null
   glBindVertexArray!: (vertexArray: WebGLVertexArrayObject | null) => void
   glDeleteVertexArray!: (vertexArray: WebGLVertexArrayObject) => void
+  private _pickObjects: PickObjects
+  private _nextPickColor: Uint32Array<ArrayBuffer>
+  private _textureFloat: boolean = false
+  private _textureHalfFloat: boolean = false
+  private _s3tc: boolean = false
+  private _pvrtc: boolean = false
+  private _astc: boolean = false
+  private _etc: boolean = false
+  private _etc1: boolean = false
+  private _bc7: boolean = false
+  private _textureFilterAnisotropic: boolean = false
+  private _textureFloatLinear: boolean = false
+  private _textureHalfFloatLinear: boolean = false
+  private _defaultFramebufferMarker: {}
 
   get uniformState() {
     return this._uniformState
   }
   get depthTexture() {
     return this._depthTexture
+  }
+  get floatingPointTexture() {
+    return this.isSuppotedwebgl2 || this._textureFloat
+  }
+  get isSuppotedwebgl2() {
+    return typeof WebGL2RenderingContext !== 'undefined'
+  }
+  get halfFloatingPointTexture() {
+    return this.isSuppotedwebgl2 || this._textureHalfFloat
+  }
+  get s3tc() {
+    return this._s3tc
+  }
+  get pvrtc() {
+    return this._pvrtc
+  }
+  get astc() {
+    return this._astc
+  }
+  get etc() {
+    return this._etc
+  }
+  get etc1() {
+    return this._etc1
+  }
+  get bc7() {
+    return this._bc7
+  }
+  get textureFilterAnisotropic() {
+    return this._textureFilterAnisotropic
+  }
+  get textureFloatLinear() {
+    return this._textureFloatLinear
+  }
+  get textureHalfFloatLinear() {
+    return this._textureHalfFloatLinear
+  }
+  get defaultFramebuffer() {
+    return this._defaultFramebufferMarker
   }
 
   constructor(options: ContextOptions) {
@@ -47,6 +110,10 @@ export default class Context {
       'WEBGL_depth_texture',
       'WEBKIT_WEBGL_depth_texture'
     ])
+
+    this._pickObjects = {}
+    this._nextPickColor = new Uint32Array(1)
+    this._defaultFramebufferMarker = {}
   }
 
   private _initContext() {
@@ -60,11 +127,10 @@ export default class Context {
     //   this._gpuAdapter = gpuAdapter
     //   this._gpuDevice = device
     // }
-    const isSuppotedwebgl2 = typeof WebGL2RenderingContext !== 'undefined'
     const contextType =
       this._gpuAdapter && this._useGPU
         ? 'webgpu'
-        : isSuppotedwebgl2
+        : this.isSuppotedwebgl2
           ? 'webgl2'
           : 'webgl'
 
@@ -86,6 +152,39 @@ export default class Context {
 
   private _initialFunctions() {
     if (!this.gl) return
+    ContextLimits.maximumTextureSize = this.gl.getParameter(
+      this.gl.MAX_TEXTURE_SIZE
+    )
+    ContextLimits.maximumVertexTextureImageUnits = this.gl.getParameter(
+      this.gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS
+    )
+    ContextLimits.maximumColorAttachments =
+      this.gl.getParameter(WebGL2RenderingContext.MAX_COLOR_ATTACHMENTS) || 1
+    this._textureFloat = !!getExtension(this.gl, ['OES_texture_float'])
+    this._textureHalfFloat = !!getExtension(this.gl, ['OES_texture_half_float'])
+    this._s3tc = !!getExtension(this.gl, [
+      'WEBGL_compressed_texture_s3tc',
+      'MOZ_WEBGL_compressed_texture_s3tc',
+      'WEBKIT_WEBGL_compressed_texture_s3tc'
+    ])
+    this._pvrtc = !!getExtension(this.gl, [
+      'WEBGL_compressed_texture_pvrtc',
+      'WEBKIT_WEBGL_compressed_texture_pvrtc'
+    ])
+    this._astc = !!getExtension(this.gl, ['WEBGL_compressed_texture_astc'])
+    this._etc = !!getExtension(this.gl, ['WEBG_compressed_texture_etc'])
+    this._etc1 = !!getExtension(this.gl, ['WEBGL_compressed_texture_etc1'])
+    this._bc7 = !!getExtension(this.gl, ['EXT_texture_compression_bptc'])
+    this._textureFilterAnisotropic = getExtension(this.gl, [
+      'EXT_texture_filter_anisotropic',
+      'WEBKIT_EXT_texture_filter_anisotropic'
+    ])
+    this._textureFloatLinear = !!getExtension(this.gl, [
+      'OES_texture_float_linear'
+    ])
+    this._textureHalfFloatLinear = !!getExtension(this.gl, [
+      'OES_texture_half_float_linear'
+    ])
     if (this.gl instanceof WebGL2RenderingContext) {
       this.glCreateVertexArray = this.gl.createVertexArray.bind(this.gl)
       this.glBindVertexArray = this.gl.bindVertexArray.bind(this.gl)
@@ -105,7 +204,22 @@ export default class Context {
     }
   }
 
-  draw({
+  public createPickId(object: PickObject) {
+    if (!Defined(object)) {
+      throw new Error('object is required.')
+    }
+
+    ++this._nextPickColor[0]
+    const key = this._nextPickColor[0]
+    if (key === 0) {
+      throw new Error('The maximum number of pick IDs has been reached.')
+    }
+
+    this._pickObjects[key] = object
+    return new PickId(this._pickObjects, key, Color.fromRgba(key))
+  }
+
+  public draw({
     context,
     geometry,
     uniformState
@@ -129,7 +243,7 @@ export default class Context {
     shaderProgram.initialize()
     shaderProgram.bind()
 
-    this.feedUniforms({ shaderProgram })
+    this._feedUniforms({ shaderProgram })
     this.shaderProgram = shaderProgram
 
     if (
@@ -162,7 +276,7 @@ export default class Context {
       0
     )
   }
-  feedUniforms({ shaderProgram }: { shaderProgram: ShaderProgram }) {
+  private _feedUniforms({ shaderProgram }: { shaderProgram: ShaderProgram }) {
     for (const uniformName in shaderProgram.uniforms) {
       const uniform = shaderProgram.uniforms[uniformName]
 

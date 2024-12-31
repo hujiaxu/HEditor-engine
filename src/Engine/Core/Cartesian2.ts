@@ -39,6 +39,15 @@ export default class Cartesian2 {
     cartesian: Cartesian3,
     result?: Cartesian2
   ) => Cartesian2
+  static unpack: (
+    array: number[],
+    index: number,
+    result?: Cartesian2
+  ) => Cartesian2
+  static fromCartesian4: (
+    cartesian: Cartesian2,
+    result?: Cartesian2
+  ) => Cartesian2
   constructor(x?: number, y?: number) {
     this.x = x || 0.0
     this.y = y || 0.0
@@ -149,3 +158,16 @@ Cartesian2.fromCartesian3 = function (
   result.y = cartesian.y
   return result
 }
+Cartesian2.unpack = function (
+  array: number[],
+  index: number,
+  result?: Cartesian2
+) {
+  if (!result) {
+    result = new Cartesian2()
+  }
+  result.x = array[index]
+  result.y = array[index + 1]
+  return result
+}
+Cartesian2.fromCartesian4 = Cartesian2.clone

@@ -1,11 +1,10 @@
-import GeometryAttribute from '../../Engine/Core/GeometryAttribute'
-import Geometry from '../../Engine/Core/Geometry'
-import Matrix4 from '../../Engine/Core/Matrix4'
+import { GeometryAttribute, Geometry, Matrix4, Primitive } from '../../Engine'
 
 export interface GeometryInstanceOptions {
   modelMatrix?: Matrix4
   geometry: Geometry
   id: string
+  pickPrimitive: Primitive
   attributes: {
     [key: string]: GeometryAttribute
   }

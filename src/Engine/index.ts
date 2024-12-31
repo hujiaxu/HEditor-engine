@@ -12,6 +12,8 @@ import Cartesian4 from './Core/Cartesian4'
 
 import Cartographic from './Core/Cartographic'
 
+import Color from './Core/Color'
+
 import CubicRealPolynomial from './Core/CubicRealPolynomial'
 
 import DefaultValue from './Core/DefaultValue'
@@ -56,6 +58,8 @@ import PerspectiveFrustum from './Core/PerspectiveFrustum'
 
 import PerspectiveOffCenterFrustum from './Core/PerspectiveOffCenterFrustum'
 
+import PickId from './Core/PickId'
+
 import Plane from './Core/Plane'
 
 import QuadraticRealPolynomial from './Core/QuadraticRealPolynomial'
@@ -76,7 +80,25 @@ import Buffer from './Renderer/Buffer'
 
 import Context from './Renderer/Context'
 
+import ContextLimits from './Renderer/ContextLimits'
+
+import Framebuffer from './Renderer/Framebuffer'
+
+import PixelDatatype from './Renderer/PixelDatatype'
+
+import PixelFormat from './Renderer/PixelFormat'
+
+import Sampler from './Renderer/Sampler'
+
 import ShaderProgram from './Renderer/ShaderProgram'
+
+import Texture from './Renderer/Texture'
+
+import TextureMagnificationFilter from './Renderer/TextureMagnificationFilter'
+
+import TextureMinificationFilter from './Renderer/TextureMinificationFilter'
+
+import TextureWrap from './Renderer/TextureWrap'
 
 import Uniform from './Renderer/Uniform'
 
@@ -122,6 +144,7 @@ export {
   Cartesian3,
   Cartesian4,
   Cartographic,
+  Color,
   CubicRealPolynomial,
   DefaultValue,
   Defined,
@@ -144,6 +167,7 @@ export {
   OrthographicOffCenterFrustum,
   PerspectiveFrustum,
   PerspectiveOffCenterFrustum,
+  PickId,
   Plane,
   QuadraticRealPolynomial,
   QuarticRealPolynomial,
@@ -154,7 +178,16 @@ export {
   Transforms,
   Buffer,
   Context,
+  ContextLimits,
+  Framebuffer,
+  PixelDatatype,
+  PixelFormat,
+  Sampler,
   ShaderProgram,
+  Texture,
+  TextureMagnificationFilter,
+  TextureMinificationFilter,
+  TextureWrap,
   Uniform,
   UniformState,
   VertexArray,

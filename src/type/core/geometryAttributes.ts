@@ -15,11 +15,14 @@ export enum ComponentDatatype {
   FLOAT_MAT3 = WebGLRenderingContext.FLOAT_MAT3,
   FLOAT_MAT4 = WebGLRenderingContext.FLOAT_MAT4,
   SAMPLER_2D = WebGLRenderingContext.SAMPLER_2D,
-  SAMPLER_CUBE = WebGLRenderingContext.SAMPLER_CUBE
+  SAMPLER_CUBE = WebGLRenderingContext.SAMPLER_CUBE,
+  UNSIGNED_BYTE = WebGLRenderingContext.UNSIGNED_BYTE
 }
 
 export interface GeometryAttributeOptions {
   componentDatatype: ComponentDatatype
   componentsPerAttribute: number
   values: number[]
+  normalize?: boolean
+  functionName?: string
 }

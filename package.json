@@ -13,7 +13,7 @@
     "prettier": "prettier --write \"src/**/*.ts\"",
     "build:comment": "构建",
     "local": "npm run watch && node watcher.js",
-    "watch": "nodemon --ignore dist/ --ignore node_modules/ --ignore \"src/**/index.ts\" / --ignore \"src/Shaders/*.ts\" --watch src/ -C -e js,jsx,ts,tsx,css,less,glsl --debug -x 'node compileGLSL.js && pnpm run build'",
+    "watch": "nodemon --ignore dist/ --ignore node_modules/ --ignore 'src/**/index.ts' / --ignore 'src/Shaders/*.ts' --watch src/ -C -e js,jsx,ts,tsx,css,less,glsl --debug -x 'pnpm run build && yalc publish'",
     "build": "node compileGLSL.js && npm run eslint && npm run prettier && rm -rf lib && tsc --build"
   },
   "keywords": [],
