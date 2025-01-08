@@ -2,19 +2,16 @@ import { ComponentDatatype, GeometryAttributeOptions } from '../../type'
 
 export default class GeometryAttribute {
   componentDatatype: ComponentDatatype
-  values: number[]
+  values: ArrayLike<number>
   componentsPerAttribute: number
   normalize: boolean
 
-  constructor({
-    componentsPerAttribute,
-    componentDatatype,
-    values,
-    normalize
-  }: GeometryAttributeOptions) {
-    this.componentDatatype = componentDatatype
-    this.values = values
-    this.componentsPerAttribute = componentsPerAttribute
+  constructor(options?: GeometryAttributeOptions) {
+    const { componentsPerAttribute, componentDatatype, values, normalize } =
+      options || {}
+    this.componentDatatype = componentDatatype || ComponentDatatype.FLOAT
+    this.values = values || []
+    this.componentsPerAttribute = componentsPerAttribute || 1
     this.normalize = normalize || false
   }
 }

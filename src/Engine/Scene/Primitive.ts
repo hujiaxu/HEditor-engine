@@ -1,5 +1,6 @@
 import {
   ComponentDatatype,
+  GeometryAttributeType,
   PrimitiveOptions,
   PrimitiveState,
   PrimitiveType,
@@ -20,10 +21,27 @@ import FrameState from './FrameState'
 import GeometryInstance from '../Core/GeometryInstance'
 import Material from './Material'
 import ContextLimits from '../Renderer/ContextLimits'
+import Geometry from '../Core/Geometry'
+import GeometryAttributes from '../Core/GeometryAttributes'
+import BoundingSphere from '../Core/BoundingSphere'
+import GeometryAttribute from '../Core/GeometryAttribute'
+import PrimitivePipeline from './PrimitivePipeline'
+
+interface BoundingSphereAttributeIndices {
+  center3DHigh: number
+  center3DLow: number
+  center2DHigh: number
+  center2DLow: number
+  radius: number
+}
+interface AttributeIndices {
+  [name: string]: number
+}
 
 export default class Primitive {
   public readonly geometryInstances: GeometryInstance[] | GeometryInstance
   public readonly primitiveType: PrimitiveType
+  private _asynchronous: boolean
   public show: boolean
   public modelMatrix: Matrix4
   public cull: boolean
@@ -36,14 +54,24 @@ export default class Primitive {
   public _depthFailAppearance: undefined | Appearance
   public _depthFailMaterial: undefined | Material
 
-  public _vertexCacheOptimize: boolean
   public _interleave: boolean
   public _releaseGeometryInstances: boolean
   public _allowPicking: boolean
-  public _asynchronous: boolean
-  public _compressVertices: boolean
+  private _compressVertices: boolean
   public _translucent: undefined
   public _state: PrimitiveState
+  private _createPickOffsets: any
+  private _vertexCacheOptimize: boolean
+
+  public get asynchronous() {
+    return this._asynchronous
+  }
+  public get vertexCacheOptimize() {
+    return this._vertexCacheOptimize
+  }
+  public get compressVertices() {
+    return this._compressVertices
+  }
 
   public _geometries: GeometryInstance[]
   public _error: undefined | string
@@ -72,16 +100,18 @@ export default class Primitive {
   public _pickCommands: never[]
   public _ready: boolean
   private _batchTable: undefined | BatchTable
-  public _batchTableAttributeIndices: undefined
+  public _batchTableAttributeIndices: AttributeIndices | undefined
   public _offsetInstanceExtend: undefined
-  public _batchTableOffsetAttribute2DIndex: undefined
+  public _batchTableOffsetAttribute2DIndex: undefined | number
   public _batchTableOffsetsUpdated: boolean
   public _instanceBoundingSpheres: undefined
   public _instanceBoundingSpheresCV: undefined
   public _tempBoundingSpheres: undefined
   public _recomputeBoundingSpheres: boolean
   public _batchTableBoundingSphereUpdated: boolean
-  public _batchTableBoundingSphereAttributeIndices: undefined
+  public _batchTableBoundingSphereAttributeIndices:
+    | BoundingSphereAttributeIndices
+    | undefined
 
   constructor(options: PrimitiveOptions) {
     this.geometryInstances = options.GeometryInstances
@@ -194,6 +224,125 @@ export default class Primitive {
       }
       this._batchTable.update(frameState)
     }
+
+    if (
+      this._state !== PrimitiveState.COMPLETE &&
+      this._state !== PrimitiveState.COMBINED
+    ) {
+      if (this.asynchronous) {
+        this._loadAsynchronous(frameState)
+      } else {
+        this._loadSynchronous(frameState)
+      }
+    }
+  }
+
+  private _loadAsynchronous(frameState: FrameState) {}
+  private _loadSynchronous(frameState: FrameState) {
+    const instances = Array.isArray(this.geometryInstances)
+      ? this.geometryInstances
+      : [this.geometryInstances]
+    const length = (this._numberOfInstances = instances.length)
+    const clonedInstances = new Array(length)
+    const instanceIds = this._instanceIds
+
+    let instance
+    let i
+
+    let geometryIndex = 0
+    for (i = 0; i < length; i++) {
+      instance = instances[i]
+      const geometry = instance.geometry
+
+      let createdGeometry
+      if (Defined(geometry.attributes) && Defined(geometry.primitiveType)) {
+        createdGeometry = this._cloneGeometry(geometry)
+      }
+      // else {
+      // createdGeometry = geometry.constructor.createGeometry(geometry);
+      // }
+
+      clonedInstances[geometryIndex++] = this._cloneInstance(
+        instance,
+        createdGeometry!
+      )
+      instanceIds.push(instance.id)
+    }
+
+    clonedInstances.length = geometryIndex;
+
+    const scene3DOnly = frameState.scene3DOnly;
+    const projection = frameState.mapProjection;
+
+    const result = PrimitivePipeline.combineGeometry({
+      instances: clonedInstances,
+      ellipsoid: projection!.ellipsoid,
+      projection: projection!,
+      elementIndexUintSupported: frameState.context.elementIndexUint,
+      scene3DOnly: scene3DOnly,
+      vertexCacheOptimize: this.vertexCacheOptimize,
+      compressVertices: this.compressVertices,
+      modelMatrix: this.modelMatrix,
+      createPickOffsets: this._createPickOffsets,
+    });
+  }
+
+  private _cloneInstance(instance: GeometryInstance, geometry: Geometry) {
+    return new GeometryInstance({
+      geometry: geometry,
+      id: instance.id,
+      modelMatrix: Matrix4.clone(instance.modelMatrix),
+      pickPrimitive: instance.pickPrimitive,
+      attributes: instance.attributes,
+    })
+  }
+
+  private _cloneGeometry(geometry: Geometry) {
+    const attributes = geometry.attributes
+    const newAttributes = new GeometryAttributes()
+
+    for (const property in attributes) {
+      if (
+        attributes.hasOwnProperty(property) &&
+        Defined(attributes[property as GeometryAttributeType])
+      ) {
+        newAttributes[property as GeometryAttributeType] = this._cloneAttribute(attributes[property as GeometryAttributeType]!)
+      }
+    }
+
+    let indices
+    if (Defined(geometry.indices)) {
+      const sourceValues = geometry.indices
+      if (Array.isArray(sourceValues)) {
+        indices = sourceValues.slice(0)
+      }
+      // else {
+      //   indices = new sourceValues.constructor(sourceValues);
+      // }
+    }
+
+    return new Geometry({
+      attributes: newAttributes,
+      indices: indices!,
+      primitiveType: geometry.primitiveType,
+      boundingSphere: BoundingSphere.clone(geometry.boundingSphere)
+    })
+  }
+
+  private _cloneAttribute(attribute: GeometryAttribute) {
+    
+    let clonedValues;
+    if (Array.isArray(attribute.values)) {
+      clonedValues = attribute.values.slice(0);
+    } else {
+      clonedValues = [attribute.values];
+    }
+    return new GeometryAttribute({
+      componentDatatype: attribute.componentDatatype,
+      componentsPerAttribute: attribute.componentsPerAttribute,
+      normalize: attribute.normalize,
+      values: clonedValues as number[],
+    });
   }
 
   private _createBatchTable(context: Context) {
@@ -210,8 +359,14 @@ export default class Primitive {
     const length = names.length
 
     const attributes = []
-    const attributeIndices: { [name: string]: number } = {}
-    const boundingSphereAttributeIndices = {}
+    const attributeIndices: AttributeIndices = {}
+    const boundingSphereAttributeIndices: BoundingSphereAttributeIndices = {
+      center3DHigh: 0,
+      center3DLow: 0,
+      center2DHigh: 0,
+      center2DLow: 0,
+      radius: 0
+    }
     let offset2DIndex
 
     const firstInstance = instances[0]
@@ -223,6 +378,41 @@ export default class Primitive {
       name = names[i]
       attribute = instanceAttributes[name]
 
+      if (names.indexOf('distanceDisplayCondition') !== -1) {
+        attributes.push(
+          {
+            functionName: 'czm_batchTable_boundingSphereCenter3DHigh',
+            componentDatatype: ComponentDatatype.FLOAT,
+            componentsPerAttribute: 3
+          },
+          {
+            functionName: 'czm_batchTable_boundingSphereCenter3DLow',
+            componentDatatype: ComponentDatatype.FLOAT,
+            componentsPerAttribute: 3
+          },
+          {
+            functionName: 'czm_batchTable_boundingSphereCenter2DHigh',
+            componentDatatype: ComponentDatatype.FLOAT,
+            componentsPerAttribute: 3
+          },
+          {
+            functionName: 'czm_batchTable_boundingSphereCenter2DLow',
+            componentDatatype: ComponentDatatype.FLOAT,
+            componentsPerAttribute: 3
+          },
+          {
+            functionName: 'czm_batchTable_boundingSphereRadius',
+            componentDatatype: ComponentDatatype.FLOAT,
+            componentsPerAttribute: 1
+          }
+        )
+        boundingSphereAttributeIndices.center3DHigh = attributes.length - 5
+        boundingSphereAttributeIndices.center3DLow = attributes.length - 4
+        boundingSphereAttributeIndices.center2DHigh = attributes.length - 3
+        boundingSphereAttributeIndices.center2DLow = attributes.length - 2
+        boundingSphereAttributeIndices.radius = attributes.length - 1
+      }
+
       attributeIndices[name] = i
       attributes.push({
         functionName: `czm_batchTable_${name}`,
@@ -232,6 +422,14 @@ export default class Primitive {
       })
     }
 
+    if (names.indexOf('offset') !== -1) {
+      attributes.push({
+        functionName: 'czm_batchTable_offset2D',
+        componentDatatype: ComponentDatatype.FLOAT,
+        componentsPerAttribute: 3
+      })
+      offset2DIndex = attributes.length - 1
+    }
     attributes.push({
       functionName: 'czm_batchTable_pickColor',
       componentDatatype: ComponentDatatype.UNSIGNED_BYTE,
@@ -276,6 +474,11 @@ export default class Primitive {
       batchTable.setBatchedAttribute(i, attributesLength - 1, color)
     }
 
+    this._batchTable = batchTable
+    this._batchTableAttributeIndices = attributeIndices
+    this._batchTableBoundingSphereAttributeIndices =
+      boundingSphereAttributeIndices
+    this._batchTableOffsetAttribute2DIndex = offset2DIndex
     this._batchTable = batchTable
   }
 

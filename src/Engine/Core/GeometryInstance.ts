@@ -1,7 +1,7 @@
 import { GeometryInstanceOptions } from '../../type'
 import defaultValue from '../Core/DefaultValue'
 import Geometry from '../Core/Geometry'
-import GeometryAttribute from '../Core/GeometryAttribute'
+import GeometryAttribute from './GeometryAttribute'
 import Matrix4 from '../Core/Matrix4'
 import Primitive from '../Scene/Primitive'
 

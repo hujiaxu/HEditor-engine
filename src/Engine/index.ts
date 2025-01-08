@@ -4,6 +4,8 @@ import AssociativeArray from './Core/AssociativeArray'
 
 import BoundingRectangle from './Core/BoundingRectangle'
 
+import BoundingSphere from './Core/BoundingSphere'
+
 import Cartesian2 from './Core/Cartesian2'
 
 import Cartesian3 from './Core/Cartesian3'
@@ -33,6 +35,8 @@ import GeographicProjection from './Core/GeographicProjection'
 import Geometry from './Core/Geometry'
 
 import GeometryAttribute from './Core/GeometryAttribute'
+
+import GeometryAttributes from './Core/GeometryAttributes'
 
 import GeometryInstance from './Core/GeometryInstance'
 
@@ -140,6 +144,7 @@ export {
   Viewer,
   AssociativeArray,
   BoundingRectangle,
+  BoundingSphere,
   Cartesian2,
   Cartesian3,
   Cartesian4,
@@ -155,6 +160,7 @@ export {
   GeographicProjection,
   Geometry,
   GeometryAttribute,
+  GeometryAttributes,
   GeometryInstance,
   GetTimestamp,
   HeadingPitchRoll,

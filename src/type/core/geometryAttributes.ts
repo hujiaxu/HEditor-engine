@@ -1,3 +1,5 @@
+import { GeometryAttribute } from '../../Engine'
+
 export enum ComponentDatatype {
   FLOAT = WebGLRenderingContext.FLOAT,
   FLOAT_VEC2 = WebGLRenderingContext.FLOAT_VEC2,
@@ -22,7 +24,20 @@ export enum ComponentDatatype {
 export interface GeometryAttributeOptions {
   componentDatatype: ComponentDatatype
   componentsPerAttribute: number
-  values: number[]
+  values: ArrayLike<number>
   normalize?: boolean
   functionName?: string
 }
+
+export interface GeometryAttributesOptions {
+  position: GeometryAttribute
+  normal?: GeometryAttribute
+  st?: GeometryAttribute
+  binormal?: GeometryAttribute
+  tangent?: GeometryAttribute
+  bitangent?: GeometryAttribute
+  color?: GeometryAttribute
+  batchId?: GeometryAttribute
+}
+
+export type GeometryAttributeType = 'position' | 'normal' | 'st' | 'binormal' | 'tangent' | 'bitangent' | 'color' | 'batchId'

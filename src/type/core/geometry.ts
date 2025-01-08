@@ -1,12 +1,10 @@
-import Matrix4 from '../../Engine/Core/Matrix4'
-import GeometryAttribute from '../../Engine/Core/GeometryAttribute'
 import { PrimitiveType } from '../scene/primitive'
+import { BoundingSphere, Matrix4, GeometryAttributes } from '../../Engine'
 
 export interface GeometryOptions {
-  attributes: {
-    [key: string]: GeometryAttribute
-  }
-  indices: Uint16Array
+  attributes: GeometryAttributes
+  indices: Uint16Array | number[]
   primitiveType: PrimitiveType
   modelMatrix?: Matrix4
+  boundingSphere?: BoundingSphere
 }

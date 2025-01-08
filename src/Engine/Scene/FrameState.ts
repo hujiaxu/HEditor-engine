@@ -1,4 +1,5 @@
 import { FrameStateOptions, SceneMode } from '../../type'
+import GeographicProjection from '../Core/GeographicProjection'
 import Context from '../Renderer/Context'
 
 export default class FrameState {
@@ -6,6 +7,7 @@ export default class FrameState {
   pixelRatio: number
   mode: SceneMode
   public scene3DOnly: boolean = true
+  public mapProjection: undefined | GeographicProjection
   public passes = {
     render: false,
     pick: false,

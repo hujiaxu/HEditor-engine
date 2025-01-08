@@ -5,7 +5,7 @@ export interface GeometryInstanceOptions {
   geometry: Geometry
   id: string
   pickPrimitive: Primitive
-  attributes: {
+  attributes?: {
     [key: string]: GeometryAttribute
   }
 }

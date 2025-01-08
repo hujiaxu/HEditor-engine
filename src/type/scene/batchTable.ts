@@ -4,5 +4,5 @@ export interface BatchTableAttribute {
   functionName: string
   componentDatatype: ComponentDatatype
   componentsPerAttribute: number
-  normalize: boolean
+  normalize?: boolean
 }
