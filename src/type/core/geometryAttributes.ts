@@ -1,28 +1,55 @@
-import { GeometryAttribute } from '../../Engine'
+import { Defined, GeometryAttribute } from '../../Engine'
 
-export enum ComponentDatatype {
-  FLOAT = WebGLRenderingContext.FLOAT,
-  FLOAT_VEC2 = WebGLRenderingContext.FLOAT_VEC2,
-  FLOAT_VEC3 = WebGLRenderingContext.FLOAT_VEC3,
-  FLOAT_VEC4 = WebGLRenderingContext.FLOAT_VEC4,
-  INT = WebGLRenderingContext.INT,
-  INT_VEC2 = WebGLRenderingContext.INT_VEC2,
-  INT_VEC3 = WebGLRenderingContext.INT_VEC3,
-  INT_VEC4 = WebGLRenderingContext.INT_VEC4,
-  BOOL = WebGLRenderingContext.BOOL,
-  BOOL_VEC2 = WebGLRenderingContext.BOOL_VEC2,
-  BOOL_VEC3 = WebGLRenderingContext.BOOL_VEC3,
-  BOOL_VEC4 = WebGLRenderingContext.BOOL_VEC4,
-  FLOAT_MAT2 = WebGLRenderingContext.FLOAT_MAT2,
-  FLOAT_MAT3 = WebGLRenderingContext.FLOAT_MAT3,
-  FLOAT_MAT4 = WebGLRenderingContext.FLOAT_MAT4,
-  SAMPLER_2D = WebGLRenderingContext.SAMPLER_2D,
-  SAMPLER_CUBE = WebGLRenderingContext.SAMPLER_CUBE,
-  UNSIGNED_BYTE = WebGLRenderingContext.UNSIGNED_BYTE
+export const ComponentDatatype = {
+  BYTE: WebGLRenderingContext.BYTE,
+  FLOAT: WebGLRenderingContext.FLOAT,
+  SHORT: WebGLRenderingContext.SHORT,
+  UNSIGNED_BYTE: WebGLRenderingContext.UNSIGNED_BYTE,
+  UNSIGNED_SHORT: WebGLRenderingContext.UNSIGNED_SHORT,
+  UNSIGNED_INT: WebGLRenderingContext.UNSIGNED_INT,
+  // Desktop OpenGL
+  DOUBLE: 0x140a,
+  INT: WebGLRenderingContext.INT,
+  createTypedArray: (componentDatatype: number, valuesOrLength: number) => {
+  
+    //>>includeStart('debug', pragmas.debug);
+    if (!Defined(componentDatatype)) {
+      throw new Error("componentDatatype is required.");
+    }
+    if (!Defined(valuesOrLength)) {
+      throw new Error("valuesOrLength is required.");
+    }
+    //>>includeEnd('debug');
+
+
+  switch (componentDatatype) {
+    case ComponentDatatype.BYTE:
+      return new Int8Array(valuesOrLength);
+    case ComponentDatatype.UNSIGNED_BYTE:
+      return new Uint8Array(valuesOrLength);
+    case ComponentDatatype.SHORT:
+      return new Int16Array(valuesOrLength);
+    case ComponentDatatype.UNSIGNED_SHORT:
+      return new Uint16Array(valuesOrLength);
+    case ComponentDatatype.INT:
+      return new Int32Array(valuesOrLength);
+    case ComponentDatatype.UNSIGNED_INT:
+      return new Uint32Array(valuesOrLength);
+    case ComponentDatatype.FLOAT:
+      return new Float32Array(valuesOrLength);
+    case ComponentDatatype.DOUBLE:
+      return new Float64Array(valuesOrLength);
+    //>>includeStart('debug', pragmas.debug);
+    default:
+      throw new Error("componentDatatype is not a valid value.");
+    //>>includeEnd('debug');
+  }
+  }
 }
 
+
 export interface GeometryAttributeOptions {
-  componentDatatype: ComponentDatatype
+  componentDatatype: number
   componentsPerAttribute: number
   values: ArrayLike<number>
   normalize?: boolean

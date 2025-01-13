@@ -3,10 +3,10 @@ import defaultValue from "./DefaultValue";
 import Defined from "./Defined";
 
 export default class Tipsify {
-  static tipsify: (options: TipsifyOptions) => 0 | number[];
+  static tipsify: (options: TipsifyOptions) => Uint16Array | Uint32Array;
 }
 
-Tipsify.tipsify = (options: TipsifyOptions) => {
+Tipsify.tipsify = (options: TipsifyOptions): Uint16Array | Uint32Array => {
 
   const indices = options.indices;
   const maximumIndex = options.maximumIndex;
@@ -14,7 +14,7 @@ Tipsify.tipsify = (options: TipsifyOptions) => {
 
   let cursor: number = 0;
 
-  const skipDeadEnd = (vertices: any[], deadEnd: number[], indices: Uint16Array | number[], maximumIndexPlusOne: number) => {
+  const skipDeadEnd = (vertices: any[], deadEnd: number[], indices: Uint16Array | Uint32Array, maximumIndexPlusOne: number) => {
     while (deadEnd.length >= 1) {
       // while the stack is not empty
       const d = deadEnd[deadEnd.length - 1]; // top of the stack
@@ -37,7 +37,7 @@ Tipsify.tipsify = (options: TipsifyOptions) => {
   }
 
   const getNextVertex = (
-    indices: Uint16Array | number[], 
+    indices: Uint16Array | Uint32Array, 
     cacheSize: number,
     oneRing: number[],
     vertices: any[],
@@ -119,7 +119,7 @@ Tipsify.tipsify = (options: TipsifyOptions) => {
       intoIndices = indices[currentIndex];
     }
     if (maximumIndexPlusOne === -1) {
-      return 0;
+      return new Uint16Array(0);
     }    
     ++maximumIndexPlusOne;
   }
@@ -219,5 +219,5 @@ Tipsify.tipsify = (options: TipsifyOptions) => {
   }
 
 
-  return outputIndices;
+  return new Uint16Array(outputIndices);
 }

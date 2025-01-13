@@ -1,7 +1,7 @@
 import { ComponentDatatype, GeometryAttributeOptions } from '../../type'
 
 export default class GeometryAttribute {
-  componentDatatype: ComponentDatatype
+  componentDatatype: number
   values: ArrayLike<number>
   componentsPerAttribute: number
   normalize: boolean

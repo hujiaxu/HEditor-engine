@@ -5,6 +5,7 @@ const HEditorMath = {
   PI: Math.PI,
   TWO_PI: 2.0 * Math.PI,
   PI_OVER_TWO: Math.PI / 2.0,
+  SIXTY_FOUR_KILOBYTES: 64 * 1024,
   zeroToTwoPi: function (angle: number): number {
     if (!defined(angle)) {
       throw new Error('angle is required.')

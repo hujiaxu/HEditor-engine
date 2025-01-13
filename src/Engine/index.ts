@@ -47,6 +47,8 @@ import GetTimestamp from './Core/GetTimestamp';
         
 import HeadingPitchRoll from './Core/HeadingPitchRoll';
         
+import IndexDatatype from './Core/IndexDatatype';
+        
 import IntersectionTests from './Core/IntersectionTests';
         
 import Interval from './Core/Interval';
@@ -172,6 +174,7 @@ GeometryInstance,
 GeometryPipeline,
 GetTimestamp,
 HeadingPitchRoll,
+IndexDatatype,
 IntersectionTests,
 Interval,
 Math,

@@ -131,6 +131,37 @@ const geometryPipeline = (parameters: CombineGeometryParameters) => {
 
 
   addBatchIds(instances);
+
+
+  // Optimize for vertex shader caches
+  if (vertexCacheOptimize) {
+    for (i = 0; i < length; ++i) {
+      const instance = instances[i];
+      if (Defined(instance.geometry)) {
+        // https://www.cse.ust.hk/~psander/docs/tipsy.pdf
+        GeometryPipeline.reorderForPostVertexCache(instance.geometry);
+        GeometryPipeline.reorderForPreVertexCache(instance.geometry);
+      } 
+      // else if (
+      //   Defined(instance.westHemisphereGeometry) &&
+      //   Defined(instance.eastHemisphereGeometry)
+      // ) {
+      //   GeometryPipeline.reorderForPostVertexCache(
+      //     instance.westHemisphereGeometry,
+      //   );
+      //   GeometryPipeline.reorderForPreVertexCache(
+      //     instance.westHemisphereGeometry,
+      //   );
+
+      //   GeometryPipeline.reorderForPostVertexCache(
+      //     instance.eastHemisphereGeometry,
+      //   );
+      //   GeometryPipeline.reorderForPreVertexCache(
+      //     instance.eastHemisphereGeometry,
+      //   );
+      // }
+    }
+  }
 };
 export default class PrimitivePipeline {
   static combineGeometry: (parameters: CombineGeometryParameters) => void;
