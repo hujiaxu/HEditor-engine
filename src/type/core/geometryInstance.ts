@@ -9,3 +9,7 @@ export interface GeometryInstanceOptions {
     [key: string]: GeometryAttribute
   }
 }
+
+export enum InstanceGeometryType {
+  GEOMETRY = 'geometry'
+}

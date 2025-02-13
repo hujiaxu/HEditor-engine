@@ -58,6 +58,8 @@ export interface GeometryAttributeOptions {
 
 export interface GeometryAttributesOptions {
   position: GeometryAttribute
+  position3DHigh?: GeometryAttribute
+  position3DLow?: GeometryAttribute
   normal?: GeometryAttribute
   st?: GeometryAttribute
   binormal?: GeometryAttribute
@@ -67,4 +69,4 @@ export interface GeometryAttributesOptions {
   batchId?: GeometryAttribute
 }
 
-export type GeometryAttributeType = 'position' | 'normal' | 'st' | 'binormal' | 'tangent' | 'bitangent' | 'color' | 'batchId'
+export type GeometryAttributeType = 'position' | 'position3DHigh' | 'position3DLow' | 'normal' | 'st' | 'binormal' | 'tangent' | 'bitangent' | 'color' | 'batchId'

@@ -1,4 +1,4 @@
-import { ComponentDatatype } from "../../type";
+import { ComponentDatatype, GeometryAttributeType } from "../../type";
 import { CombineGeometryParameters } from "../../type/scene/primitivePipeline";
 import Defined from "../Core/Defined";
 import Geometry from "../Core/Geometry";
@@ -160,6 +160,36 @@ const geometryPipeline = (parameters: CombineGeometryParameters) => {
       //     instance.eastHemisphereGeometry,
       //   );
       // }
+    }
+  }
+
+  // Combine into single geometry for better rendering performance.
+  let geometries = GeometryPipeline.combineInstances(instances);
+
+  length = geometries.length;
+  for (i = 0; i < length; ++i) {
+    geometry = geometries[i];
+
+    // Split positions for GPU RTE
+    const attributes = geometry.attributes;
+
+    if (scene3DOnly) {
+
+      for (const name in attributes) {
+        const attributeName = name as GeometryAttributeType
+        if (
+          attributes.hasOwnProperty(name) &&
+          attributes[attributeName] &&
+          attributes[attributeName].componentDatatype === ComponentDatatype.DOUBLE
+        ) {
+          GeometryPipeline.encodeAttribute(
+            geometry,
+            name,
+            `${name}3DHigh` as GeometryAttributeType,
+            `${name}3DLow` as GeometryAttributeType,
+          );
+        }
+      }
     }
   }
 };

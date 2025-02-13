@@ -21,7 +21,7 @@ export default class Geometry {
     boundingSphere
   }: GeometryOptions) {
     this.attributes = attributes
-    this.indices = indices
+    this.indices = indices || new Uint16Array(0)
     this.primitiveType = primitiveType
     this.modelMatrix = modelMatrix || Matrix4.IDENTITY
     this.boundingSphere =

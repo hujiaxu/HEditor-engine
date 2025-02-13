@@ -10,6 +10,8 @@ export default class GeometryAttributes {
   bitangent: GeometryAttribute | undefined
   color: GeometryAttribute | undefined
   batchId: GeometryAttribute | undefined
+  position3DHigh: GeometryAttribute | undefined
+  position3DLow: GeometryAttribute | undefined
 
   constructor(options?: GeometryAttributesOptions) {
     const { position, normal, st, binormal, tangent, color, bitangent, batchId } = options || {}

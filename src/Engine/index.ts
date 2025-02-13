@@ -29,6 +29,8 @@ import EllipsoidGeodesic from './Core/EllipsoidGeodesic';
         
 import EllipsoidTerrainProvider from './Core/EllipsoidTerrainProvider';
         
+import EncodedCartesian3 from './Core/EncodedCartesian3';
+        
 import FeatureDetection from './Core/FeatureDetection';
         
 import GeographicProjection from './Core/GeographicProjection';
@@ -165,6 +167,7 @@ Defined,
 Ellipsoid,
 EllipsoidGeodesic,
 EllipsoidTerrainProvider,
+EncodedCartesian3,
 FeatureDetection,
 GeographicProjection,
 Geometry,
