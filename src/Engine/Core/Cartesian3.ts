@@ -88,6 +88,7 @@ export default class Cartesian3 {
   ) => Cartesian3
   static pack: (cartesian: Cartesian3, array: number[], index: number) => number[]
   static maximumComponent: (cartesian: Cartesian3) => number
+  static fromArray: (array: ArrayLike<number>, startIndex: number, result?: Cartesian3) => Cartesian3
   constructor(x?: number, y?: number, z?: number) {
     this.x = x || 0
     this.y = y || 0
@@ -382,4 +383,17 @@ Cartesian3.projectVector = function (
 Cartesian3.fromCartesian4 = Cartesian3.clone
 Cartesian3.maximumComponent = function (cartesian: Cartesian3) {
   return Math.max(cartesian.x, cartesian.y, cartesian.z)
+}
+Cartesian3.fromArray = function (
+  array: ArrayLike<number>,
+  startIndex: number,
+  result?: Cartesian3
+) {
+  if (!result) {
+    result = new Cartesian3()
+  }
+  result.x = array[startIndex]
+  result.y = array[startIndex + 1]
+  result.z = array[startIndex + 2]
+  return result
 }

@@ -7,6 +7,8 @@ import Primitive from '../Scene/Primitive'
 
 export default class GeometryInstance {
   geometry: Geometry
+  eastHemisphereGeometry: Geometry | undefined
+westHemisphereGeometry: Geometry | undefined
   id: string
   modelMatrix: Matrix4
   attributes: { [key: string]: GeometryAttribute } | undefined = undefined
@@ -17,5 +19,7 @@ export default class GeometryInstance {
     this.modelMatrix = defaultValue(options.modelMatrix, Matrix4.IDENTITY)
     this.attributes = options.attributes
     this.pickPrimitive = options.pickPrimitive || undefined
+    this.eastHemisphereGeometry = options.eastHemisphereGeometry
+    this.westHemisphereGeometry = options.westHemisphereGeometry
   }
 }

@@ -6,6 +6,15 @@ const HEditorMath = {
   TWO_PI: 2.0 * Math.PI,
   PI_OVER_TWO: Math.PI / 2.0,
   SIXTY_FOUR_KILOBYTES: 64 * 1024,
+  toSNorm: function (value: number, rangeMaximum: number): number {
+    rangeMaximum = defaultValue(rangeMaximum, 255);
+    return Math.round(
+      (HEditorMath.clamp(value, -1.0, 1.0) * 0.5 + 0.5) * rangeMaximum,
+    );
+  },
+  signNotZero: function (value: number): number {
+    return value < 0 ? -1 : 1
+  },
   zeroToTwoPi: function (angle: number): number {
     if (!defined(angle)) {
       throw new Error('angle is required.')

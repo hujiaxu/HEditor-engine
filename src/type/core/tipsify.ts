@@ -1,5 +1,5 @@
 export interface TipsifyOptions {
-  indices: Uint16Array | Uint32Array
+  indices: Uint16Array | Uint32Array | number[]
 maximumIndex: number
 cacheSize?: number
 }

@@ -12,6 +12,8 @@ export default class GeometryAttributes {
   batchId: GeometryAttribute | undefined
   position3DHigh: GeometryAttribute | undefined
   position3DLow: GeometryAttribute | undefined
+  // extrudeDirection: GeometryAttribute | undefined
+  [key: string]: GeometryAttribute | undefined
 
   constructor(options?: GeometryAttributesOptions) {
     const { position, normal, st, binormal, tangent, color, bitangent, batchId } = options || {}
@@ -25,5 +27,9 @@ export default class GeometryAttributes {
 
     this.bitangent = bitangent
     this.batchId = batchId
+
+    this.position3DHigh = undefined
+    this.position3DLow = undefined
+    // this.extrudeDirection = extrudeDirection
   }
 }

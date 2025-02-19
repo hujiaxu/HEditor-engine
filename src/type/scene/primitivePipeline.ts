@@ -4,7 +4,7 @@ export interface CombineGeometryParameters {
   instances: GeometryInstance[]
   ellipsoid: Ellipsoid
   projection: GeographicProjection
-  elementIndexUintSupported: number
+  elementIndexUintSupported: boolean
   scene3DOnly: boolean
   vertexCacheOptimize: boolean
   compressVertices: boolean

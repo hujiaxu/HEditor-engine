@@ -1,6 +1,7 @@
 import {
   ComponentDatatype,
   GeometryAttributeType,
+  GeometryAttributeValuesType,
   PrimitiveOptions,
   PrimitiveState,
   PrimitiveType,
@@ -332,16 +333,16 @@ export default class Primitive {
   private _cloneAttribute(attribute: GeometryAttribute) {
     
     let clonedValues;
-    if (Array.isArray(attribute.values)) {
+    // if (Array.isArray(attribute.values)) {
       clonedValues = attribute.values.slice(0);
-    } else {
-      clonedValues = [attribute.values];
-    }
+    // } else {
+    //   clonedValues = [attribute.values];
+    // }
     return new GeometryAttribute({
       componentDatatype: attribute.componentDatatype,
       componentsPerAttribute: attribute.componentsPerAttribute,
       normalize: attribute.normalize,
-      values: clonedValues as number[],
+      values: clonedValues,
     });
   }
 
@@ -482,16 +483,16 @@ export default class Primitive {
     this._batchTable = batchTable
   }
 
-  private _getAttributeValue(values: number[]) {
+  private _getAttributeValue(values: GeometryAttributeValuesType) {
     const componentsPerAttribute = values.length
     if (componentsPerAttribute === 1) {
       return values[0]
     } else if (componentsPerAttribute === 2) {
-      return Cartesian2.unpack(values, 0)
+      return Cartesian2.unpack([...values], 0)
     } else if (componentsPerAttribute === 3) {
       return Cartesian3.unpack(values, 0)
     } else if (componentsPerAttribute === 4) {
-      return Cartesian4.unpack(values, 0)
+      return Cartesian4.unpack([...values], 0)
     }
   }
   private _getCommonPerInstanceAttributeNames(instances: GeometryInstance[]) {

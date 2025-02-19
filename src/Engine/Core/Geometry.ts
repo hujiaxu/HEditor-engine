@@ -4,21 +4,25 @@ import GeometryAttributes from './GeometryAttributes'
 import BoundingSphere from './BoundingSphere'
 import Cartesian3 from './Cartesian3'
 import Defined from './Defined'
+import GeometryAttribute from './GeometryAttribute'
 
 export default class Geometry {
   attributes: GeometryAttributes
-  indices: Uint16Array | Uint32Array
+  indices: Uint16Array | Uint32Array | number[]
   primitiveType: PrimitiveType
   modelMatrix: Matrix4
 
   boundingSphere: BoundingSphere
+  boundingSphereCV: BoundingSphere | undefined
+  offsetAttribute: GeometryAttribute | undefined
   static computeNumberOfVertices: (geometry: Geometry) => number
   constructor({
     attributes,
     indices,
     primitiveType,
     modelMatrix,
-    boundingSphere
+    boundingSphere,
+    boundingSphereCV
   }: GeometryOptions) {
     this.attributes = attributes
     this.indices = indices || new Uint16Array(0)
@@ -26,6 +30,8 @@ export default class Geometry {
     this.modelMatrix = modelMatrix || Matrix4.IDENTITY
     this.boundingSphere =
       boundingSphere || new BoundingSphere(Cartesian3.ZERO, 0)
+
+      this.boundingSphereCV = boundingSphereCV || undefined
   }
 }
 

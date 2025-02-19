@@ -47,11 +47,13 @@ export const ComponentDatatype = {
   }
 }
 
+export type GeometryAttributeValuesType = Int8Array<ArrayBuffer> | Uint8Array<ArrayBuffer> | Float32Array<ArrayBuffer> | Int16Array<ArrayBuffer> | Uint16Array<ArrayBuffer> | Int32Array<ArrayBuffer> | Uint32Array<ArrayBuffer> | Float64Array<ArrayBuffer>
+
 
 export interface GeometryAttributeOptions {
   componentDatatype: number
   componentsPerAttribute: number
-  values: ArrayLike<number>
+  values: GeometryAttributeValuesType
   normalize?: boolean
   functionName?: string
 }
@@ -67,6 +69,7 @@ export interface GeometryAttributesOptions {
   bitangent?: GeometryAttribute
   color?: GeometryAttribute
   batchId?: GeometryAttribute
+  extrudeDirection?: GeometryAttribute
 }
 
 export type GeometryAttributeType = 'position' | 'position3DHigh' | 'position3DLow' | 'normal' | 'st' | 'binormal' | 'tangent' | 'bitangent' | 'color' | 'batchId'

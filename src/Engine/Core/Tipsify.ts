@@ -14,7 +14,7 @@ Tipsify.tipsify = (options: TipsifyOptions): Uint16Array | Uint32Array => {
 
   let cursor: number = 0;
 
-  const skipDeadEnd = (vertices: any[], deadEnd: number[], indices: Uint16Array | Uint32Array, maximumIndexPlusOne: number) => {
+  const skipDeadEnd = (vertices: any[], deadEnd: number[], indices: Uint16Array | Uint32Array | number[], maximumIndexPlusOne: number) => {
     while (deadEnd.length >= 1) {
       // while the stack is not empty
       const d = deadEnd[deadEnd.length - 1]; // top of the stack
@@ -37,7 +37,7 @@ Tipsify.tipsify = (options: TipsifyOptions): Uint16Array | Uint32Array => {
   }
 
   const getNextVertex = (
-    indices: Uint16Array | Uint32Array, 
+    indices: Uint16Array | Uint32Array | number[], 
     cacheSize: number,
     oneRing: number[],
     vertices: any[],

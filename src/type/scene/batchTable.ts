@@ -1,8 +1,8 @@
-import { ComponentDatatype } from '../core/geometryAttributes'
+
 
 export interface BatchTableAttribute {
   functionName: string
-  componentDatatype: ComponentDatatype
+  componentDatatype: number
   componentsPerAttribute: number
   normalize?: boolean
 }

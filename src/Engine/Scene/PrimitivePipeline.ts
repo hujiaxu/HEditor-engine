@@ -1,5 +1,6 @@
-import { ComponentDatatype, GeometryAttributeType } from "../../type";
+import { ComponentDatatype, GeometryAttributeType, GeometryType } from "../../type";
 import { CombineGeometryParameters } from "../../type/scene/primitivePipeline";
+import BoundingSphere from "../Core/BoundingSphere";
 import Defined from "../Core/Defined";
 import Geometry from "../Core/Geometry";
 import GeometryAttribute from "../Core/GeometryAttribute";
@@ -48,7 +49,7 @@ const addGeometryBatchId = (geometry: Geometry, batchId: number) => {
   const attributes = geometry.attributes;
   const positionAttr = attributes.position!;
   const numberOfComponents =
-    (positionAttr.values as number[]).length / positionAttr.componentsPerAttribute;
+    positionAttr.values.length / positionAttr.componentsPerAttribute;
 
     attributes.batchId = new GeometryAttribute({
       componentDatatype: ComponentDatatype.FLOAT,
@@ -56,7 +57,7 @@ const addGeometryBatchId = (geometry: Geometry, batchId: number) => {
       values: new Float32Array(numberOfComponents),
     });
 
-    const batchIds = attributes.batchId.values as number[];
+    const batchIds = attributes.batchId.values;
     for (let i = 0; i < numberOfComponents; ++i) {
       batchIds[i] = batchId;
     }
@@ -83,7 +84,7 @@ const addBatchIds = (instances: GeometryInstance[]) => {
 const geometryPipeline = (parameters: CombineGeometryParameters) => {
 
   const instances = parameters.instances;
-  const projection = parameters.projection;
+  // const projection = parameters.projection;
   const uintIndexSupport = parameters.elementIndexUintSupported;
   const scene3DOnly = parameters.scene3DOnly;
   const vertexCacheOptimize = parameters.vertexCacheOptimize;
@@ -184,33 +185,184 @@ const geometryPipeline = (parameters: CombineGeometryParameters) => {
         ) {
           GeometryPipeline.encodeAttribute(
             geometry,
-            name,
+            attributeName,
             `${name}3DHigh` as GeometryAttributeType,
             `${name}3DLow` as GeometryAttributeType,
           );
         }
       }
     }
+
+    // oct encode and pack normals, compress texture coordinates
+    if (compressVertices) {
+      GeometryPipeline.compressVertices(geometry);
+    }
   }
+
+  if (!uintIndexSupport) {
+    // Break into multiple geometries to fit within unsigned short indices if needed
+    let splitGeometries: Geometry[] = [];
+    length = geometries.length;
+    for (i = 0; i < length; ++i) {
+      geometry = geometries[i];
+      splitGeometries = splitGeometries.concat(
+        GeometryPipeline.fitToUnsignedShortIndices(geometry),
+      );
+    }
+
+    geometries = splitGeometries;
+  }
+
+  return geometries;
 };
 export default class PrimitivePipeline {
   static combineGeometry: (parameters: CombineGeometryParameters) => void;
 }
 
+interface PickOffsets {
+  index: number
+  offset: number
+  count: number
+}
+
+const createPickOffsets = (instances: GeometryInstance[], geometryName: GeometryType, geometries: Geometry[], pickOffsets: PickOffsets[]) => {
+  let offset;
+  let indexCount;
+  let geometryIndex;
+
+  const offsetIndex = pickOffsets.length - 1;
+  if (offsetIndex >= 0) {
+    const pickOffset = pickOffsets[offsetIndex];
+    offset = pickOffset.offset + pickOffset.count;
+    geometryIndex = pickOffset.index;
+    indexCount = geometries[geometryIndex].indices.length;
+  } else {
+    offset = 0;
+    geometryIndex = 0;
+    indexCount = geometries[geometryIndex].indices.length;
+  }
+
+  const length = instances.length;
+  for (let i = 0; i < length; ++i) {
+    const instance = instances[i];
+    const geometry = instance[geometryName];
+    if (!Defined(geometry)) {
+      continue;
+    }
+
+    const count = geometry.indices.length;
+
+    if (offset + count > indexCount) {
+      offset = 0;
+      indexCount = geometries[++geometryIndex].indices.length;
+    }
+
+    pickOffsets.push({
+      index: geometryIndex,
+      offset: offset,
+      count: count,
+    });
+    offset += count;
+  }
+}
+
+const createInstancePickOffsets = (instances: GeometryInstance[], geometries: Geometry[]) => {
+  
+  const pickOffsets: PickOffsets[] = [];
+  createPickOffsets(instances, GeometryType.GEOMETRY, geometries, pickOffsets);
+  createPickOffsets(
+    instances,
+    GeometryType.WEST_HEMISPHERE_GEOMETRY,
+    geometries,
+    pickOffsets,
+  );
+  createPickOffsets(
+    instances,
+    GeometryType.EAST_HEMISPHERE_GEOMETRY,
+    geometries,
+    pickOffsets,
+  );
+  return pickOffsets;
+}
+
 PrimitivePipeline.combineGeometry = function (
   parameters: CombineGeometryParameters
 ) {
-  let geometries;
+  let geometries: Geometry[];
   let attributeLocations;
   const instances = parameters.instances;
   const length = instances.length;
   let pickOffsets;
 
-  let offsetInstanceExtend;
+  let offsetInstanceExtend: GeometryAttribute[];
   let hasOffset = false;
 
   if (length > 0) {
 
     geometries = geometryPipeline(parameters);
+    if (geometries.length > 0) {
+      attributeLocations = GeometryPipeline.createAttributeLocations(
+        geometries[0],
+      );
+      if (parameters.createPickOffsets) {
+        pickOffsets = createInstancePickOffsets(instances, geometries);
+      }
+    }
+    if (
+      Defined(instances[0].attributes) &&
+      Defined(instances[0].attributes.offset)
+    ) {
+      offsetInstanceExtend = new Array(length);
+      hasOffset = true;
+    }
   }
+
+  const boundingSpheres = new Array(length);
+  const boundingSpheresCV = new Array(length);
+
+  for (let i = 0; i < length; ++i) {
+    const instance = instances[i];
+    const geometry = instance.geometry;
+
+    if (Defined(geometry)) {
+      boundingSpheres[i] = geometry.boundingSphere;
+      boundingSpheresCV[i] = geometry.boundingSphereCV;
+      if (hasOffset) {
+        offsetInstanceExtend![i] = instance.geometry.offsetAttribute!;
+      }
+    }
+
+    const eastHemisphereGeometry = instance.eastHemisphereGeometry;
+    const westHemisphereGeometry = instance.westHemisphereGeometry;
+    if (Defined(eastHemisphereGeometry) && Defined(westHemisphereGeometry)) {
+      if (
+        Defined(eastHemisphereGeometry.boundingSphere) &&
+        Defined(westHemisphereGeometry.boundingSphere)
+      ) {
+        boundingSpheres[i] = BoundingSphere.union(
+          eastHemisphereGeometry.boundingSphere,
+          westHemisphereGeometry.boundingSphere,
+        );
+      }
+      if (
+        Defined(eastHemisphereGeometry.boundingSphereCV) &&
+        Defined(westHemisphereGeometry.boundingSphereCV)
+      ) {
+        boundingSpheresCV[i] = BoundingSphere.union(
+          eastHemisphereGeometry.boundingSphereCV,
+          westHemisphereGeometry.boundingSphereCV,
+        );
+      }
+    }
+  }
+
+  return {
+    geometries: geometries!,
+    modelMatrix: parameters.modelMatrix,
+    attributeLocations: attributeLocations,
+    pickOffsets: pickOffsets,
+    offsetInstanceExtend: offsetInstanceExtend!,
+    boundingSpheres: boundingSpheres,
+    boundingSpheresCV: boundingSpheresCV,
+  };
 }

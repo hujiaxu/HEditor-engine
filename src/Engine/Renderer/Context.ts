@@ -44,6 +44,7 @@ export default class Context {
   private _etc: boolean = false
   private _etc1: boolean = false
   private _bc7: boolean = false
+  private _elementIndexUint: boolean = false
   private _textureFilterAnisotropic: boolean = false
   private _textureFloatLinear: boolean = false
   private _textureHalfFloatLinear: boolean = false
@@ -55,11 +56,11 @@ export default class Context {
   get depthTexture() {
     return this._depthTexture
   }
-  get floatingPointTexture() {
-    return this.isSuppotedwebgl2 || this._textureFloat
-  }
   get isSuppotedwebgl2() {
     return typeof WebGL2RenderingContext !== 'undefined'
+  }
+  get floatingPointTexture() {
+    return this.isSuppotedwebgl2 || this._textureFloat
   }
   get halfFloatingPointTexture() {
     return this.isSuppotedwebgl2 || this._textureHalfFloat
@@ -69,6 +70,9 @@ export default class Context {
   }
   get pvrtc() {
     return this._pvrtc
+  }
+  get elementIndexUint() {
+    return this._elementIndexUint || this.isSuppotedwebgl2
   }
   get astc() {
     return this._astc
@@ -185,6 +189,7 @@ export default class Context {
     this._textureHalfFloatLinear = !!getExtension(this.gl, [
       'OES_texture_half_float_linear'
     ])
+    this._elementIndexUint = !!getExtension(this.gl, ["OES_element_index_uint"]);
     if (this.gl instanceof WebGL2RenderingContext) {
       this.glCreateVertexArray = this.gl.createVertexArray.bind(this.gl)
       this.glBindVertexArray = this.gl.bindVertexArray.bind(this.gl)

@@ -1,12 +1,16 @@
 import { ComponentDatatype, GeometryAttributeType, InstanceGeometryType, PrimitiveType } from "../../type";
+import AttributeCompression from "./AttributeCompression";
 import BoundingSphere from "./BoundingSphere";
+import Cartesian2 from "./Cartesian2";
 import Cartesian3 from "./Cartesian3";
 import Defined from "./Defined";
 import EncodedCartesian3 from "./EncodedCartesian3";
 import Geometry from "./Geometry";
 import GeometryAttribute from "./GeometryAttribute";
+import GeometryAttributes from "./GeometryAttributes";
 import GeometryInstance from "./GeometryInstance";
 import IndexDatatype from "./IndexDatatype";
+import HEditorMath from "./Math";
 import Matrix3 from "./Matrix3";
 import Matrix4 from "./Matrix4";
 import Tipsify from "./Tipsify";
@@ -14,12 +18,12 @@ import Tipsify from "./Tipsify";
 let scratchCartesian3 = new Cartesian3();
 const transformPoint = (matrix: Matrix4, attribute: GeometryAttribute) => {
   if (Defined(attribute)) {
-    const values = attribute.values as number[];
+    const values = attribute.values;
     const length = values.length;
     for (let i = 0; i < length; i += 3) {
       Cartesian3.unpack(values, i, scratchCartesian3);
       Matrix4.multiplyByPoint(matrix, scratchCartesian3, scratchCartesian3);
-      Cartesian3.pack(scratchCartesian3, values, i);
+      Cartesian3.pack(scratchCartesian3, [...values], i);
     }
   }
 }
@@ -31,7 +35,7 @@ const transformVector = (matrix: Matrix3, attribute: GeometryAttribute) => {
       Cartesian3.unpack(values, i, scratchCartesian3);
       Matrix3.multiplyByVector(matrix, scratchCartesian3, scratchCartesian3);
       Cartesian3.normalize(scratchCartesian3, scratchCartesian3);
-      Cartesian3.pack(scratchCartesian3, values as number[], i);
+      Cartesian3.pack(scratchCartesian3, [...values], i);
     }
   }
 }
@@ -42,6 +46,9 @@ export default class GeometryPipeline {
   static reorderForPreVertexCache: (geometry: Geometry) => Geometry;
   static combineInstances: (instances: GeometryInstance[]) => Geometry[];
   static encodeAttribute: (geometry: Geometry, attributeName: GeometryAttributeType, attributeHighName: GeometryAttributeType, attributeLowName: GeometryAttributeType) => Geometry;
+  static createAttributeLocations: (geometry: Geometry) => { [key: string]: number; };
+  static compressVertices: (geometry: Geometry) => Geometry;
+  static fitToUnsignedShortIndices: (geometry: Geometry) => Geometry[];
 }
 
 const inverseTranspose = new Matrix4();
@@ -221,7 +228,7 @@ const findAttributesInAllGeometries = (instances: GeometryInstance[], propertyNa
   }
 
   const attributes0 = instances[0][propertyName].attributes;
-  let name: GeometryAttributeType;
+  let name: GeometryAttributeType | string;
 
   for (name in attributes0) {
     if (
@@ -252,7 +259,7 @@ const findAttributesInAllGeometries = (instances: GeometryInstance[], propertyNa
         }
 
         if (inAllGeometries) {
-          attributesInAllGeometries[name] = new GeometryAttribute({
+          attributesInAllGeometries[name as GeometryAttributeType] = new GeometryAttribute({
             componentDatatype: attribute.componentDatatype,
             componentsPerAttribute: attribute.componentsPerAttribute,
             normalize: attribute.normalize,
@@ -318,7 +325,7 @@ const combineGeometries = (instances: GeometryInstance[], propertyName: Instance
         sourceValuesLength = sourceValues.length;
 
         for (j = 0; j < sourceValuesLength; ++j) {
-          (values as number[])[k++] = sourceValues[j];
+          values[k++] = sourceValues[j];
         }
       }
     }
@@ -504,4 +511,377 @@ GeometryPipeline.encodeAttribute = (geometry: Geometry, attributeName: GeometryA
   delete geometry.attributes[attributeName];
 
   return geometry;
+}
+
+const scratchCartesian2 = new Cartesian2();
+const toEncode1 = new Cartesian3();
+const toEncode2 = new Cartesian3();
+const toEncode3 = new Cartesian3();
+let encodeResult2 = new Cartesian2();
+GeometryPipeline.compressVertices = (geometry: Geometry) => {
+
+  //>>includeStart('debug', pragmas.debug);
+  if (!Defined(geometry)) {
+    throw new Error("geometry is required.");
+  }
+  //>>includeEnd('debug');
+
+
+  const extrudeAttribute = geometry.attributes.extrudeDirection;
+  let i;
+  let numVertices;
+
+  if (Defined(extrudeAttribute)) {
+    //only shadow volumes use extrudeDirection, and shadow volumes use vertexFormat: POSITION_ONLY so we don't need to check other attributes
+    const extrudeDirections = extrudeAttribute.values;
+    numVertices = extrudeDirections.length / 3.0;
+    const compressedDirections = new Float32Array(numVertices * 2);
+
+    let i2 = 0;
+    for (i = 0; i < numVertices; ++i) {
+      Cartesian3.fromArray(extrudeDirections, i * 3.0, toEncode1);
+      if (Cartesian3.equals(toEncode1, Cartesian3.ZERO)) {
+        i2 += 2;
+        continue;
+      }
+      encodeResult2 = AttributeCompression.octEncodeInRange(
+        toEncode1,
+        65535,
+        encodeResult2,
+      );
+      compressedDirections[i2++] = encodeResult2.x;
+      compressedDirections[i2++] = encodeResult2.y;
+    }
+
+    geometry.attributes.compressedAttributes = new GeometryAttribute({
+      componentDatatype: ComponentDatatype.FLOAT,
+      componentsPerAttribute: 2,
+      values: compressedDirections,
+    });
+    delete geometry.attributes.extrudeDirection;
+    return geometry;
+  }
+
+  const normalAttribute = geometry.attributes.normal;
+  const stAttribute = geometry.attributes.st;
+
+  const hasNormal = Defined(normalAttribute);
+  const hasSt = Defined(stAttribute);
+  if (!hasNormal && !hasSt) {
+    return geometry;
+  }
+
+  const tangentAttribute = geometry.attributes.tangent;
+  const bitangentAttribute = geometry.attributes.bitangent;
+
+  const hasTangent = Defined(tangentAttribute);
+  const hasBitangent = Defined(bitangentAttribute);
+
+  let normals: ArrayLike<number> | undefined;
+  let st: ArrayLike<number> | undefined;
+  let tangents: ArrayLike<number> | undefined;
+  let bitangents: ArrayLike<number> | undefined;
+
+  if (hasNormal) {
+    normals = normalAttribute.values;
+  }
+  if (hasSt) {
+    st = stAttribute.values;
+  }
+  if (hasTangent) {
+    tangents = tangentAttribute.values;
+  }
+  if (hasBitangent) {
+    bitangents = bitangentAttribute.values;
+  }
+
+  const length = hasNormal ? normals?.length : st?.length;
+  const numComponents = hasNormal ? 3.0 : 2.0;
+  numVertices = length! / numComponents;
+
+  let compressedLength = numVertices;
+  let numCompressedComponents = hasSt && hasNormal ? 2.0 : 1.0;
+  numCompressedComponents += hasTangent || hasBitangent ? 1.0 : 0.0;
+  compressedLength *= numCompressedComponents;
+
+  const compressedAttributes = new Float32Array(compressedLength);
+
+  let normalIndex = 0;
+  for (i = 0; i < numVertices; ++i) {
+
+    if (hasSt) {
+      Cartesian2.fromArray(st!, i * 2.0, scratchCartesian2);
+      compressedAttributes[normalIndex++] =
+        AttributeCompression.compressTextureCoordinates(scratchCartesian2);
+    }
+
+
+    const index = i * 3.0;
+    if (hasNormal && Defined(tangents) && Defined(bitangents)) {
+
+      Cartesian3.fromArray(normals!, index, toEncode1);
+      Cartesian3.fromArray(tangents, index, toEncode2);
+      Cartesian3.fromArray(bitangents, index, toEncode3);
+
+      AttributeCompression.octPack(
+        toEncode1,
+        toEncode2,
+        toEncode3,
+        scratchCartesian2,
+      );
+      compressedAttributes[normalIndex++] = scratchCartesian2.x;
+      compressedAttributes[normalIndex++] = scratchCartesian2.y;
+    } else {
+
+      if (hasNormal) {
+        Cartesian3.fromArray(normals!, index, toEncode1);
+        compressedAttributes[normalIndex++] =
+          AttributeCompression.octEncodeFloat(toEncode1);
+      }
+
+      if (hasTangent) {
+        Cartesian3.fromArray(tangents!, index, toEncode1);
+        compressedAttributes[normalIndex++] =
+          AttributeCompression.octEncodeFloat(toEncode1);
+      }
+
+      if (hasBitangent) {
+        Cartesian3.fromArray(bitangents!, index, toEncode1);
+        compressedAttributes[normalIndex++] =
+          AttributeCompression.octEncodeFloat(toEncode1);
+      }
+    }
+  }
+
+  geometry.attributes.compressedAttributes = new GeometryAttribute({
+    componentDatatype: ComponentDatatype.FLOAT,
+    componentsPerAttribute: numCompressedComponents,
+    values: compressedAttributes,
+  });
+  
+  if (hasNormal) {
+    delete geometry.attributes.normal;
+  }
+  if (hasSt) {
+    delete geometry.attributes.st;
+  }
+  if (hasBitangent) {
+    delete geometry.attributes.bitangent;
+  }
+  if (hasTangent) {
+    delete geometry.attributes.tangent;
+  }
+
+  return geometry;
+}
+
+GeometryPipeline.createAttributeLocations = (geometry: Geometry) => {
+
+  //>>includeStart('debug', pragmas.debug);
+  if (!Defined(geometry)) {
+    throw new Error("geometry is required.");
+  }
+  //>>includeEnd('debug');
+
+  // There can be a WebGL performance hit when attribute 0 is disabled, so
+  // assign attribute locations to well-known attributes.
+  const semantics = [
+    "position",
+    "positionHigh",
+    "positionLow",
+
+    // From VertexFormat.position - after 2D projection and high-precision encoding
+    "position3DHigh",
+    "position3DLow",
+    "position2DHigh",
+    "position2DLow",
+
+    // From Primitive
+    "pickColor",
+
+    // From VertexFormat
+    "normal",
+    "st",
+    "tangent",
+    "bitangent",
+
+    // For shadow volumes
+    "extrudeDirection",
+
+    // From compressing texture coordinates and normals
+    "compressedAttributes",
+  ];
+
+  const attributes = geometry.attributes;
+  const indices: { [key: string]: number } = {};
+  let j = 0;
+  let i;
+  const len = semantics.length;
+
+  // Attribute locations for well-known attributes
+  for (i = 0; i < len; ++i) {
+    const semantic = semantics[i];
+
+    if (Defined(attributes[semantic])) {
+      indices[semantic] = j++;
+    }
+  }
+
+  // Locations for custom attributes
+  for (const name in attributes) {
+    if (attributes.hasOwnProperty(name) && !Defined(indices[name])) {
+      indices[name] = j++;
+    }
+  }
+
+  return indices;
+}
+
+const copyAttributesDescriptions = (attributes: GeometryAttributes) => {
+
+  const newAttributes: GeometryAttributes = {
+    position: undefined,
+    normal: undefined,
+    st: undefined,
+    binormal: undefined,
+    tangent: undefined,
+    bitangent: undefined,
+    color: undefined,
+    batchId: undefined,
+    position3DHigh: undefined,
+    position3DLow: undefined
+  };
+
+  for (const attribute in attributes) {
+    if (
+      attributes.hasOwnProperty(attribute) &&
+      Defined(attributes[attribute as GeometryAttributeType]) &&
+      Defined(attributes[attribute as GeometryAttributeType]!.values)
+    ) {
+      const attr = attributes[attribute as GeometryAttributeType]!;
+
+      newAttributes[attribute] = new GeometryAttribute({
+        componentDatatype: attr.componentDatatype,
+        componentsPerAttribute: attr.componentsPerAttribute,
+        normalize: attr.normalize,
+        values: new Float32Array(0),
+      })
+    }
+  }
+
+  return newAttributes;
+}
+
+const copyVertex = (destinationAttributes: GeometryAttributes, sourceAttributes: GeometryAttributes, index: number) => {
+  for (const attribute in sourceAttributes) {
+    if (
+      sourceAttributes.hasOwnProperty(attribute) &&
+      Defined(sourceAttributes[attribute]) &&
+      Defined(sourceAttributes[attribute].values)
+    ) {
+
+      const attr = sourceAttributes[attribute];
+
+      for (let k = 0; k < attr.componentsPerAttribute; ++k) {
+        destinationAttributes[attribute] && (destinationAttributes[attribute].values[destinationAttributes[attribute].values.length] = attr.values[index * attr.componentsPerAttribute + k])
+      }
+    }
+  }
+}
+
+GeometryPipeline.fitToUnsignedShortIndices = (geometry: Geometry) => {
+  //>>includeStart('debug', pragmas.debug);
+  if (!Defined(geometry)) {
+    throw new Error("geometry is required.");
+  }
+  if (
+    Defined(geometry.indices) &&
+    geometry.primitiveType !== PrimitiveType.TRIANGLES &&
+    geometry.primitiveType !== PrimitiveType.LINES &&
+    geometry.primitiveType !== PrimitiveType.POINTS
+  ) {
+    throw new Error(
+      "geometry.primitiveType must equal to PrimitiveType.TRIANGLES, PrimitiveType.LINES, or PrimitiveType.POINTS.",
+    );
+  }
+  //>>includeEnd('debug');
+
+  const geometries = [];
+
+  // If there's an index list and more than 64K attributes, it is possible that
+  // some indices are outside the range of unsigned short [0, 64K - 1]
+  const numberOfVertices = Geometry.computeNumberOfVertices(geometry);
+  if (
+    Defined(geometry.indices) &&
+    numberOfVertices >= HEditorMath.SIXTY_FOUR_KILOBYTES
+  ) {
+
+    let oldToNewIndex = [];
+    let newIndices = [];
+    let currentIndex = 0;
+    let newAttributes = copyAttributesDescriptions(geometry.attributes);
+
+    const originalIndices = geometry.indices;
+    const numberOfIndices = originalIndices.length;
+
+    let indicesPerPrimitive = 0;
+
+    if (geometry.primitiveType === PrimitiveType.TRIANGLES) {
+      indicesPerPrimitive = 3;
+    } else if (geometry.primitiveType === PrimitiveType.LINES) {
+      indicesPerPrimitive = 2;
+    } else if (geometry.primitiveType === PrimitiveType.POINTS) {
+      indicesPerPrimitive = 1;
+    }
+
+    for (let j = 0; j < numberOfIndices; j += indicesPerPrimitive) {
+      for (let k = 0; k < indicesPerPrimitive; ++k) {
+        const x = originalIndices[j + k];
+        let i: number = oldToNewIndex[x];
+        if (!Defined(i)) {
+          i = currentIndex++;
+          oldToNewIndex[x] = i;
+          copyVertex(newAttributes, geometry.attributes, x);
+        }
+        newIndices.push(i);
+      }
+
+      if (
+        currentIndex + indicesPerPrimitive >=
+        HEditorMath.SIXTY_FOUR_KILOBYTES
+      ) {
+        geometries.push(
+          new Geometry({
+            attributes: newAttributes,
+            indices: newIndices,
+            primitiveType: geometry.primitiveType,
+            boundingSphere: geometry.boundingSphere,
+            boundingSphereCV: geometry.boundingSphereCV,
+          }),
+        );
+
+        // Reset for next vertex-array
+        oldToNewIndex = [];
+        newIndices = [];
+        currentIndex = 0;
+        newAttributes = copyAttributesDescriptions(geometry.attributes);
+      }
+    }
+    if (newIndices.length !== 0) {
+      geometries.push(
+        new Geometry({
+          attributes: newAttributes,
+          indices: newIndices,
+          primitiveType: geometry.primitiveType,
+          boundingSphere: geometry.boundingSphere,
+          boundingSphereCV: geometry.boundingSphereCV,
+        }),
+      );
+    }
+  } else {
+    // No need to split into multiple geometries
+    geometries.push(geometry);
+  }
+
+  return geometries;
 }
