@@ -11,6 +11,9 @@ export default class GeographicProjection {
   get ellipsoid() {
     return this._ellipsoid
   }
+  set ellipsoid(ellipsoid: Ellipsoid) {
+    this._ellipsoid = ellipsoid
+  }
   constructor(ellipsoid: Ellipsoid = Ellipsoid.default) {
     this._ellipsoid = ellipsoid
     this._semimajorAxis = ellipsoid.maximumRadius

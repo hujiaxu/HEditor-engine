@@ -83,6 +83,18 @@ export default class PerspectiveOffCenterFrustum {
       result = new Cartesian2()
     }
 
+    // 在近裁剪面上，视野的总高度为 2 * this.top，总宽度为 2 * this.right。
+    // 根据透视投影的相似三角形原理，在距离为 distance 处：
+    // 实际的半高 = (distance / this.near) * this.top
+    // 整个高度 = 2 * (distance / this.near) * this.top
+    // 类似地，宽度为：2 * (distance / this.near) * this.right
+
+    // 绘制缓冲区的宽度和高度（drawingBufferWidth 和 drawingBufferHeight）代表了画布上实际的像素总数
+    // 当我们计算出目标距离处视野的物理尺寸（例如总高度为 2 * distance * tanTheta）时，这个尺寸是覆盖整个画布的尺寸。
+    // 为了知道一个单独像素对应多少物理单位，就需要将总尺寸均分到每一个像素上，也就是除以对应的像素数。
+
+    // 在很多设备（尤其是高分辨率屏幕）上，一个 CSS 像素并不等于一个物理像素。
+    // pixelRatio 就是描述这种比例的，比如 pixelRatio 为 2 时，表示一个逻辑像素对应两个物理像素。
     const inverseNear = 1.0 / this.near
     let tanTheta = this.top * inverseNear
     const pixelHeight =

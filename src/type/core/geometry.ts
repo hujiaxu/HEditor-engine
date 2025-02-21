@@ -1,9 +1,10 @@
 import { PrimitiveType } from '../scene/primitive'
 import { BoundingSphere, Matrix4, GeometryAttributes } from '../../Engine'
+import { GeometryIndicesType } from './geometryAttributes'
 
 export interface GeometryOptions {
   attributes: GeometryAttributes
-  indices?: Uint16Array | Uint32Array | number[]
+  indices?: GeometryIndicesType
   primitiveType: PrimitiveType
   modelMatrix?: Matrix4
   boundingSphere?: BoundingSphere

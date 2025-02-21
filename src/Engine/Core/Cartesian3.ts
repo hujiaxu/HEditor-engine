@@ -86,9 +86,22 @@ export default class Cartesian3 {
     cartesian: Cartesian3,
     result?: Cartesian3
   ) => Cartesian3
-  static pack: (cartesian: Cartesian3, array: number[], index: number) => number[]
+  static pack: (
+    cartesian: Cartesian3,
+    array: number[],
+    index: number
+  ) => number[]
   static maximumComponent: (cartesian: Cartesian3) => number
-  static fromArray: (array: ArrayLike<number>, startIndex: number, result?: Cartesian3) => Cartesian3
+  static fromArray: (
+    array: ArrayLike<number>,
+    startIndex: number,
+    result?: Cartesian3
+  ) => Cartesian3
+  static midpoint: (
+    left: Cartesian3,
+    right: Cartesian3,
+    result?: Cartesian3
+  ) => Cartesian3
   constructor(x?: number, y?: number, z?: number) {
     this.x = x || 0
     this.y = y || 0
@@ -395,5 +408,19 @@ Cartesian3.fromArray = function (
   result.x = array[startIndex]
   result.y = array[startIndex + 1]
   result.z = array[startIndex + 2]
+  return result
+}
+
+Cartesian3.midpoint = function (
+  left: Cartesian3,
+  right: Cartesian3,
+  result?: Cartesian3
+) {
+  if (!result) {
+    result = new Cartesian3()
+  }
+  result.x = (left.x + right.x) * 0.5
+  result.y = (left.y + right.y) * 0.5
+  result.z = (left.z + right.z) * 0.5
   return result
 }

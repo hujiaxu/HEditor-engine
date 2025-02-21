@@ -1,5 +1,3 @@
-
-
 export interface BatchTableAttribute {
   functionName: string
   componentDatatype: number

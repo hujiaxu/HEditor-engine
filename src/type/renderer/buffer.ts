@@ -1,4 +1,5 @@
-import { ContextType } from './context'
+import { Context } from '../../Engine'
+import { GeometryAttributeValuesType } from '../core/geometryAttributes'
 
 export enum BufferTargetType {
   ARRAY_BUFFER = WebGLRenderingContext.ARRAY_BUFFER,
@@ -39,9 +40,38 @@ export enum IndexDataType {
 }
 
 export interface BufferOptions {
-  gl: ContextType
-  data: Float32Array | Uint16Array
   bufferTarget: BufferTargetType
-  bufferUsage: BufferUsageType
+  bufferUsage?: BufferUsageType
+  context: Context
+  typedArray?: ArrayBuffer | GeometryAttributeValuesType
+  usage: BufferUsageType
+  sizeInBytes?: number
   // bufferType: BufferType
+}
+
+export const BufferUsage = {
+  STREAM_DRAW: BufferUsageType.STREAM_DRAW,
+  STATIC_DRAW: BufferUsageType.STATIC_DRAW,
+  DYNAMIC_DRAW: BufferUsageType.DYNAMIC_DRAW,
+
+  validate: function (bufferUsage: BufferUsageType) {
+    return (
+      bufferUsage === BufferUsage.STREAM_DRAW ||
+      bufferUsage === BufferUsage.STATIC_DRAW ||
+      bufferUsage === BufferUsage.DYNAMIC_DRAW
+    )
+  }
+}
+export interface BufferCreateVertexBufferOptions {
+  context: Context
+  typedArray: ArrayBuffer | GeometryAttributeValuesType
+  sizeInBytes?: number
+  usage: number
+}
+export interface BufferCreateIndexBufferOptions {
+  context: Context
+  typedArray: ArrayBuffer | GeometryAttributeValuesType
+  usage: number
+  indexDatatype: number
+  sizeInBytes?: number
 }

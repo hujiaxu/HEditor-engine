@@ -11,6 +11,8 @@ export default class Plane {
     result?: Plane
   ) => Plane
 
+  static readonly ORIGIN_ZX_PLANE: Plane = new Plane(Cartesian3.UNIT_Y, 0.0)
+
   constructor(normal: Cartesian3 = Cartesian3.ZERO, distance: number = 0.0) {
     this.normal = Cartesian3.clone(normal)
     this.distance = distance

@@ -4,7 +4,7 @@ export interface GeometryInstanceOptions {
   modelMatrix?: Matrix4
   geometry: Geometry
   eastHemisphereGeometry?: Geometry
-westHemisphereGeometry?: Geometry
+  westHemisphereGeometry?: Geometry
   id: string
   pickPrimitive: Primitive
   attributes?: {

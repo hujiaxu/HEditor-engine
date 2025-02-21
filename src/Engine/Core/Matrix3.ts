@@ -35,7 +35,11 @@ export default class Matrix3 {
     headingPitchRoll: HeadingPitchRoll,
     result?: Matrix3
   ) => Matrix3
-  static equalsEpsilon: (left: Matrix3, right: Matrix3, epsilon?: number) => boolean
+  static equalsEpsilon: (
+    left: Matrix3,
+    right: Matrix3,
+    epsilon?: number
+  ) => boolean
 
   get values() {
     return this._values
@@ -329,11 +333,15 @@ Matrix3.fromHeadingPitchRoll = (
 
   return result
 }
-Matrix3.equalsEpsilon = (left: Matrix3, right: Matrix3, epsilon: number = 0) => {
+Matrix3.equalsEpsilon = (
+  left: Matrix3,
+  right: Matrix3,
+  epsilon: number = 0
+) => {
   return (
     left === right ||
-    (
-      Defined(left) && Defined(right) &&
+    (Defined(left) &&
+      Defined(right) &&
       Math.abs(left.values[0] - right.values[0]) <= epsilon &&
       Math.abs(left.values[1] - right.values[1]) <= epsilon &&
       Math.abs(left.values[2] - right.values[2]) <= epsilon &&
@@ -342,7 +350,6 @@ Matrix3.equalsEpsilon = (left: Matrix3, right: Matrix3, epsilon: number = 0) => 
       Math.abs(left.values[5] - right.values[5]) <= epsilon &&
       Math.abs(left.values[6] - right.values[6]) <= epsilon &&
       Math.abs(left.values[7] - right.values[7]) <= epsilon &&
-      Math.abs(left.values[8] - right.values[8]) <= epsilon
-    )
+      Math.abs(left.values[8] - right.values[8]) <= epsilon)
   )
 }

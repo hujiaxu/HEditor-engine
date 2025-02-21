@@ -1,43 +1,46 @@
-import { TipsifyOptions, VerticeType } from "../../type";
-import defaultValue from "./DefaultValue";
-import Defined from "./Defined";
+import { GeometryIndicesType, TipsifyOptions, VerticeType } from '../../type'
+import defaultValue from './DefaultValue'
+import Defined from './Defined'
 
 export default class Tipsify {
-  static tipsify: (options: TipsifyOptions) => Uint16Array | Uint32Array;
+  static tipsify: (options: TipsifyOptions) => GeometryIndicesType
 }
 
-Tipsify.tipsify = (options: TipsifyOptions): Uint16Array | Uint32Array => {
+Tipsify.tipsify = (options: TipsifyOptions): GeometryIndicesType => {
+  const indices = options.indices
+  const maximumIndex = options.maximumIndex
+  const cacheSize = defaultValue(options.cacheSize, 24)
 
-  const indices = options.indices;
-  const maximumIndex = options.maximumIndex;
-  const cacheSize = defaultValue(options.cacheSize, 24);
+  let cursor: number = 0
 
-  let cursor: number = 0;
-
-  const skipDeadEnd = (vertices: any[], deadEnd: number[], indices: Uint16Array | Uint32Array | number[], maximumIndexPlusOne: number) => {
+  const skipDeadEnd = (
+    vertices: any[],
+    deadEnd: number[],
+    indices: Uint16Array | Uint32Array | number[],
+    maximumIndexPlusOne: number
+  ) => {
     while (deadEnd.length >= 1) {
       // while the stack is not empty
-      const d = deadEnd[deadEnd.length - 1]; // top of the stack
-      deadEnd.splice(deadEnd.length - 1, 1); // pop the stack
+      const d = deadEnd[deadEnd.length - 1] // top of the stack
+      deadEnd.splice(deadEnd.length - 1, 1) // pop the stack
 
       if (vertices[d].numLiveTriangles > 0) {
-        return d;
+        return d
       }
     }
-
 
     while (cursor < maximumIndexPlusOne) {
       if (vertices[cursor].numLiveTriangles > 0) {
-        ++cursor;
-        return cursor - 1;
+        ++cursor
+        return cursor - 1
       }
-      ++cursor;
+      ++cursor
     }
-    return -1;
+    return -1
   }
 
   const getNextVertex = (
-    indices: Uint16Array | Uint32Array | number[], 
+    indices: Uint16Array | Uint32Array | number[],
     cacheSize: number,
     oneRing: number[],
     vertices: any[],
@@ -45,165 +48,154 @@ Tipsify.tipsify = (options: TipsifyOptions): Uint16Array | Uint32Array => {
     deadEnd: number[],
     maximumIndexPlusOne: number
   ) => {
-    
-    let n = -1;
-    let p;
-    let m = -1;
-    let itOneRing = 0;
-
+    let n = -1
+    let p
+    let m = -1
+    let itOneRing = 0
 
     while (itOneRing < oneRing.length) {
-      const index = oneRing[itOneRing];
+      const index = oneRing[itOneRing]
       if (vertices[index].numLiveTriangles) {
-        p = 0;
+        p = 0
         if (
           s -
             vertices[index].timeStamp +
             2 * vertices[index].numLiveTriangles <=
           cacheSize
         ) {
-          p = s - vertices[index].timeStamp;
+          p = s - vertices[index].timeStamp
         }
         if (p > m || m === -1) {
-          m = p;
-          n = index;
+          m = p
+          n = index
         }
       }
-      ++itOneRing;
+      ++itOneRing
     }
-
 
     if (n === -1) {
-      return skipDeadEnd(vertices, deadEnd, indices, maximumIndexPlusOne);
+      return skipDeadEnd(vertices, deadEnd, indices, maximumIndexPlusOne)
     }
-    return n;
+    return n
   }
 
-  //>>includeStart('debug', pragmas.debug);
+  // >>includeStart('debug', pragmas.debug);
   if (!Defined(indices)) {
-    throw new Error("indices is required.");
+    throw new Error('indices is required.')
   }
-  //>>includeEnd('debug');
+  // >>includeEnd('debug');
 
+  const numIndices = indices.length
 
-  const numIndices = indices.length;
-
-  //>>includeStart('debug', pragmas.debug);
+  // >>includeStart('debug', pragmas.debug);
   if (numIndices < 3 || numIndices % 3 !== 0) {
-    throw new Error("indices length must be a multiple of three.");
+    throw new Error('indices length must be a multiple of three.')
   }
   if (maximumIndex <= 0) {
-    throw new Error("maximumIndex must be greater than zero.");
+    throw new Error('maximumIndex must be greater than zero.')
   }
   if (cacheSize < 3) {
-    throw new Error("cacheSize must be greater than two.");
+    throw new Error('cacheSize must be greater than two.')
   }
-  //>>includeEnd('debug');
-
+  // >>includeEnd('debug');
 
   // Determine maximum index
-  let maximumIndexPlusOne = 0;
-  let currentIndex = 0;
-  let intoIndices = indices[currentIndex];
-  const endIndex = numIndices;
+  let maximumIndexPlusOne = 0
+  let currentIndex = 0
+  let intoIndices = indices[currentIndex]
+  const endIndex = numIndices
 
   if (Defined(maximumIndex)) {
-    maximumIndexPlusOne = maximumIndex + 1;
+    maximumIndexPlusOne = maximumIndex + 1
   } else {
-
     while (currentIndex < endIndex) {
       if (intoIndices > maximumIndexPlusOne) {
-        maximumIndexPlusOne = intoIndices;
+        maximumIndexPlusOne = intoIndices
       }
-      ++currentIndex;
-      intoIndices = indices[currentIndex];
+      ++currentIndex
+      intoIndices = indices[currentIndex]
     }
     if (maximumIndexPlusOne === -1) {
-      return new Uint16Array(0);
-    }    
-    ++maximumIndexPlusOne;
+      return new Uint16Array(0)
+    }
+    ++maximumIndexPlusOne
   }
 
-
   // Vertices
-  const vertices: VerticeType[] = [];
-  let i;
-
+  const vertices: VerticeType[] = []
+  let i
 
   for (i = 0; i < maximumIndexPlusOne; i++) {
     vertices[i] = {
       numLiveTriangles: 0,
       timeStamp: 0,
-      vertexTriangles: [],
-    };
+      vertexTriangles: []
+    }
   }
 
-
-  currentIndex = 0;
-  let triangle = 0;
-
+  currentIndex = 0
+  let triangle = 0
 
   while (currentIndex < endIndex) {
-    vertices[indices[currentIndex]].vertexTriangles.push(triangle);
-    ++vertices[indices[currentIndex]].numLiveTriangles;
-    vertices[indices[currentIndex + 1]].vertexTriangles.push(triangle);
-    ++vertices[indices[currentIndex + 1]].numLiveTriangles;
-    vertices[indices[currentIndex + 2]].vertexTriangles.push(triangle);
-    ++vertices[indices[currentIndex + 2]].numLiveTriangles;
-    ++triangle;
-    currentIndex += 3;
+    vertices[indices[currentIndex]].vertexTriangles.push(triangle)
+    ++vertices[indices[currentIndex]].numLiveTriangles
+    vertices[indices[currentIndex + 1]].vertexTriangles.push(triangle)
+    ++vertices[indices[currentIndex + 1]].numLiveTriangles
+    vertices[indices[currentIndex + 2]].vertexTriangles.push(triangle)
+    ++vertices[indices[currentIndex + 2]].numLiveTriangles
+    ++triangle
+    currentIndex += 3
   }
-
 
   // Starting index
-  let f = 0;
+  let f = 0
 
   // Time Stamp
-  let s = cacheSize + 1;
-  cursor = 1;
+  let s = cacheSize + 1
+  cursor = 1
 
   // Process
-  let oneRing = [];
-  const deadEnd = []; //Stack
-  let vertex;
-  let intoVertices;
-  let currentOutputIndex = 0;
-  const outputIndices = [];
-  const numTriangles = numIndices / 3;
-  const triangleEmitted = [];
+  let oneRing = []
+  const deadEnd = [] // Stack
+  let vertex
+  let intoVertices
+  let currentOutputIndex = 0
+  const outputIndices = []
+  const numTriangles = numIndices / 3
+  const triangleEmitted = []
   for (i = 0; i < numTriangles; i++) {
-    triangleEmitted[i] = false;
+    triangleEmitted[i] = false
   }
-  let index;
-  let limit;
+  let index
+  let limit
 
   while (f !== -1) {
-    oneRing = [];
-    intoVertices = vertices[f];
-    limit = intoVertices.vertexTriangles.length;
+    oneRing = []
+    intoVertices = vertices[f]
+    limit = intoVertices.vertexTriangles.length
     for (let k = 0; k < limit; ++k) {
-      triangle = intoVertices.vertexTriangles[k];
+      triangle = intoVertices.vertexTriangles[k]
       if (!triangleEmitted[triangle]) {
-        triangleEmitted[triangle] = true;
-        currentIndex = triangle + triangle + triangle;
+        triangleEmitted[triangle] = true
+        currentIndex = triangle + triangle + triangle
         for (let j = 0; j < 3; ++j) {
           // Set this index as a possible next index
-          index = indices[currentIndex];
-          oneRing.push(index);
-          deadEnd.push(index);
+          index = indices[currentIndex]
+          oneRing.push(index)
+          deadEnd.push(index)
 
           // Output index
-          outputIndices[currentOutputIndex] = index;
-          ++currentOutputIndex;
+          outputIndices[currentOutputIndex] = index
+          ++currentOutputIndex
 
           // Cache processing
-          vertex = vertices[index];
-          --vertex.numLiveTriangles;
+          vertex = vertices[index]
+          --vertex.numLiveTriangles
           if (s - vertex.timeStamp > cacheSize) {
-            vertex.timeStamp = s;
-            ++s;
+            vertex.timeStamp = s
+            ++s
           }
-          ++currentIndex;
+          ++currentIndex
         }
       }
     }
@@ -214,10 +206,9 @@ Tipsify.tipsify = (options: TipsifyOptions): Uint16Array | Uint32Array => {
       vertices,
       s,
       deadEnd,
-      maximumIndexPlusOne,
-    );
+      maximumIndexPlusOne
+    )
   }
 
-
-  return new Uint16Array(outputIndices);
+  return new Uint16Array(outputIndices)
 }

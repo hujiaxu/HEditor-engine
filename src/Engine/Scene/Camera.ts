@@ -25,6 +25,8 @@ import HeadingPitchRoll from '../Core/HeadingPitchRoll'
 import Rectangle from '../Core/Rectangle'
 import Transforms from '../Core/Transforms'
 import EllipsoidGeodesic from '../Core/EllipsoidGeodesic'
+import BoundingSphere from '../Core/BoundingSphere'
+import DeveloperError from '../Core/DeveloperError'
 
 const defaultRF = {
   direction: new Cartesian3(),
@@ -124,6 +126,49 @@ export default class Camera {
       this._mode = mode
     }
   }
+
+  public getPixelSize(
+    boundingSphere: BoundingSphere,
+    drawingBufferWidth: number,
+    drawingBufferHeight: number
+  ) {
+    // >>includeStart('debug', pragmas.debug);
+    if (!defined(boundingSphere)) {
+      throw new DeveloperError('boundingSphere is required.')
+    }
+    if (!defined(drawingBufferWidth)) {
+      throw new DeveloperError('drawingBufferWidth is required.')
+    }
+    if (!defined(drawingBufferHeight)) {
+      throw new DeveloperError('drawingBufferHeight is required.')
+    }
+    // >>includeEnd('debug');
+
+    const distance = this.distanceToBoundingSphere(boundingSphere)
+    const pixelSize = this.frustum.getPixelDimensions(
+      drawingBufferWidth,
+      drawingBufferHeight,
+      distance,
+      this.scene.pixelRatio
+    )
+    return Math.max(pixelSize.x, pixelSize.y)
+  }
+
+  public distanceToBoundingSphere(boundingSphere: BoundingSphere) {
+    // >>includeStart('debug', pragmas.debug);
+    if (!defined(boundingSphere)) {
+      throw new DeveloperError('boundingSphere is required.')
+    }
+    // >>includeEnd('debug');
+
+    const toCenter = Cartesian3.subtract(this.positionWC, boundingSphere.center)
+    const proj = Cartesian3.multiplyByScalar(
+      this.directionWC,
+      Cartesian3.dot(toCenter, this.directionWC)
+    )
+    return Math.max(0.0, Cartesian3.magnitude(proj) - boundingSphere.radius)
+  }
+
   private _updateMembers() {
     let position = this._position
     const positionChanged = !Cartesian3.equals(this.position, position)

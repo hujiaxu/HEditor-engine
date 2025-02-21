@@ -48,7 +48,11 @@ export default class Cartesian2 {
     cartesian: Cartesian2,
     result?: Cartesian2
   ) => Cartesian2
-  static fromArray: (array: ArrayLike<number>, startIndex: number, result?: Cartesian2) => Cartesian2
+  static fromArray: (
+    array: ArrayLike<number>,
+    startIndex: number,
+    result?: Cartesian2
+  ) => Cartesian2
   constructor(x?: number, y?: number) {
     this.x = x || 0.0
     this.y = y || 0.0

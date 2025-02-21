@@ -1,4 +1,9 @@
-import { Ellipsoid, GeographicProjection, GeometryInstance, Matrix4 } from "../../Engine";
+import {
+  Ellipsoid,
+  GeographicProjection,
+  GeometryInstance,
+  Matrix4
+} from '../../Engine'
 
 export interface CombineGeometryParameters {
   instances: GeometryInstance[]

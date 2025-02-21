@@ -12,6 +12,12 @@ import QuadraticRealPolynomial, {
 } from './QuadraticRealPolynomial'
 import Ray from './Ray'
 
+export enum Intersect {
+  OUTSIDE = -1,
+  INTERSECTING = 0,
+  INSIDE = 1
+}
+
 export default class IntersectionTests {
   static rayPlane: (
     ray: Ray,

@@ -16,6 +16,7 @@ import Defined from '../Core/Defined'
 import Color from '../Core/Color'
 import PickId from '../Core/PickId'
 import ContextLimits from './ContextLimits'
+import Framebuffer from './Framebuffer'
 
 export default class Context {
   private _canvas: HTMLCanvasElement
@@ -34,6 +35,7 @@ export default class Context {
   glCreateVertexArray!: () => WebGLVertexArrayObject | null
   glBindVertexArray!: (vertexArray: WebGLVertexArrayObject | null) => void
   glDeleteVertexArray!: (vertexArray: WebGLVertexArrayObject) => void
+  glVertexAttribDivisor!: (index: number, divisor: number) => void
   private _pickObjects: PickObjects
   private _nextPickColor: Uint32Array<ArrayBuffer>
   private _textureFloat: boolean = false
@@ -48,8 +50,15 @@ export default class Context {
   private _textureFilterAnisotropic: boolean = false
   private _textureFloatLinear: boolean = false
   private _textureHalfFloatLinear: boolean = false
-  private _defaultFramebufferMarker: {}
+  private _defaultFramebufferMarker: Framebuffer | undefined
+  private _instancedArrays: boolean = false
+  _vertexAttribDivisors: number[]
+  _previousDrawInstanced: boolean
+  private _vertexArrayObject: boolean = false
 
+  get vertexArrayObject() {
+    return this._vertexArrayObject || this.isSuppotedwebgl2
+  }
   get uniformState() {
     return this._uniformState
   }
@@ -73,6 +82,9 @@ export default class Context {
   }
   get elementIndexUint() {
     return this._elementIndexUint || this.isSuppotedwebgl2
+  }
+  get instancedArrays() {
+    return this._instancedArrays || this.isSuppotedwebgl2
   }
   get astc() {
     return this._astc
@@ -98,13 +110,20 @@ export default class Context {
   get defaultFramebuffer() {
     return this._defaultFramebufferMarker
   }
+  get drawingBufferWidth() {
+    return this.gl.drawingBufferWidth
+  }
+  get drawingBufferHeight() {
+    return this.gl.drawingBufferHeight
+  }
 
   constructor(options: ContextOptions) {
     this._canvas = options.canvas
     this._useGPU = options.isUseGPU
 
-    this.gl = this._initContext()
+    const gl = this._initContext()
     this._initialFunctions()
+    this.gl = gl
 
     this._uniformState = new UniformState({
       gl: this.gl
@@ -117,7 +136,18 @@ export default class Context {
 
     this._pickObjects = {}
     this._nextPickColor = new Uint32Array(1)
-    this._defaultFramebufferMarker = {}
+    this._defaultFramebufferMarker = undefined
+
+    ContextLimits._maximumVertexAttributes = gl.getParameter(
+      gl.MAX_VERTEX_ATTRIBS
+    ) // min: 8
+
+    // Vertex attribute divisor state cache. Workaround for ANGLE (also look at VertexArray.setVertexAttribDivisor)
+    this._vertexAttribDivisors = []
+    this._previousDrawInstanced = false
+    for (let i = 0; i < ContextLimits._maximumVertexAttributes; i++) {
+      this._vertexAttribDivisors.push(0)
+    }
   }
 
   private _initContext() {
@@ -189,15 +219,20 @@ export default class Context {
     this._textureHalfFloatLinear = !!getExtension(this.gl, [
       'OES_texture_half_float_linear'
     ])
-    this._elementIndexUint = !!getExtension(this.gl, ["OES_element_index_uint"]);
+    this._elementIndexUint = !!getExtension(this.gl, ['OES_element_index_uint'])
+    this._instancedArrays = !!getExtension(this.gl, ['ANGLE_instanced_arrays'])
     if (this.gl instanceof WebGL2RenderingContext) {
-      this.glCreateVertexArray = this.gl.createVertexArray.bind(this.gl)
-      this.glBindVertexArray = this.gl.bindVertexArray.bind(this.gl)
-      this.glDeleteVertexArray = this.gl.deleteVertexArray.bind(this.gl)
+      const gl = this.gl as WebGL2RenderingContext
+      this.glCreateVertexArray = gl.createVertexArray.bind(gl)
+      this.glBindVertexArray = gl.bindVertexArray.bind(gl)
+      this.glDeleteVertexArray = gl.deleteVertexArray.bind(gl)
+
+      this.glVertexAttribDivisor = function (index: number, divisor: number) {
+        gl.vertexAttribDivisor(index, divisor)
+      }
     } else if (this.gl instanceof WebGLRenderingContext) {
-      const vertexArrayObject = getExtension(this.gl, [
-        'OES_vertex_array_object'
-      ])
+      const gl = this.gl as WebGLRenderingContext
+      const vertexArrayObject = getExtension(gl, ['OES_vertex_array_object'])
       if (vertexArrayObject) {
         this.glCreateVertexArray =
           vertexArrayObject.createVertexArray.bind(vertexArrayObject)
@@ -205,6 +240,14 @@ export default class Context {
           vertexArrayObject.bindVertexArray.bind(vertexArrayObject)
         this.glDeleteVertexArray =
           vertexArrayObject.deleteVertexArray.bind(vertexArrayObject)
+      }
+      this._vertexArrayObject = !!vertexArrayObject
+
+      const instancedArrays = getExtension(gl, ['ANGLE_instanced_arrays'])
+      if (instancedArrays) {
+        this.glVertexAttribDivisor = function (index: number, divisor: number) {
+          instancedArrays.vertexAttribDivisor(index, divisor)
+        }
       }
     }
   }

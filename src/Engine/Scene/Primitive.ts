@@ -1,7 +1,9 @@
 import {
+  BufferUsage,
   ComponentDatatype,
   GeometryAttributeType,
   GeometryAttributeValuesType,
+  GeometryOffsetAttribute,
   PrimitiveOptions,
   PrimitiveState,
   PrimitiveType,
@@ -26,7 +28,11 @@ import Geometry from '../Core/Geometry'
 import GeometryAttributes from '../Core/GeometryAttributes'
 import BoundingSphere from '../Core/BoundingSphere'
 import GeometryAttribute from '../Core/GeometryAttribute'
-import PrimitivePipeline from './PrimitivePipeline'
+import PrimitivePipeline, { PickOffsets } from './PrimitivePipeline'
+import EncodedCartesian3 from '../Core/EncodedCartesian3'
+import VertexArray from '../Renderer/VertexArray'
+import { Intersect } from '../Core/IntersectionTests'
+import Plane from '../Core/Plane'
 
 interface BoundingSphereAttributeIndices {
   center3DHigh: number
@@ -40,7 +46,7 @@ interface AttributeIndices {
 }
 
 export default class Primitive {
-  public readonly geometryInstances: GeometryInstance[] | GeometryInstance
+  public geometryInstances: GeometryInstance[] | GeometryInstance | undefined
   public readonly primitiveType: PrimitiveType
   private _asynchronous: boolean
   public show: boolean
@@ -61,9 +67,15 @@ export default class Primitive {
   private _compressVertices: boolean
   public _translucent: undefined
   public _state: PrimitiveState
-  private _createPickOffsets: any
+  private _createPickOffsets: boolean
   private _vertexCacheOptimize: boolean
+  private _pickOffsets: PickOffsets[] | undefined
+  private _modelMatrix!: Matrix4
+  private _createBoundingVolumeFunction: undefined | ((frameState: FrameState, geometry: Geometry) => void)
 
+  public get pickOffsets() {
+    return this._pickOffsets
+  }
   public get asynchronous() {
     return this._asynchronous
   }
@@ -74,22 +86,29 @@ export default class Primitive {
     return this._compressVertices
   }
 
-  public _geometries: GeometryInstance[]
+  public get releaseGeometryInstances() {
+    return this._releaseGeometryInstances
+  }
+  public set releaseGeometryInstances(releaseGeometryInstances: boolean) {
+    this._releaseGeometryInstances = releaseGeometryInstances
+  }
+
+  public _geometries: Geometry[] | undefined
   public _error: undefined | string
   public _numberOfInstances: number
-  public _boundingSpheres: Cartesian3[]
-  public _boundingSphereWC: Cartesian3[]
-  public _boundingSphereCV: Cartesian3[]
-  public _boundingSphere2D: Cartesian3[]
-  public _boundingSphereMorph: Cartesian3[]
+  public _boundingSpheres: BoundingSphere[]
+  public _boundingSphereWC: BoundingSphere[]
+  public _boundingSphereCV: BoundingSphere[]
+  public _boundingSphere2D: BoundingSphere[]
+  public _boundingSphereMorph: BoundingSphere[]
   public _perInstanceAttributeCache: Map<string, number>
   public _instanceIds: string[]
   public _lastPerInstanceAttributeIndex: number
 
   public _isDestroyed = false
-  public _va: never[]
-  public _attributeLocations: undefined
-  public _primitiveType: undefined
+  public _va: VertexArray[]
+  public _attributeLocations: undefined | { [key: string]: number }
+  public _primitiveType!: PrimitiveType
   public _frontFaceRS: undefined
   public _backFaceRS: undefined
   public _sp: undefined
@@ -102,14 +121,14 @@ export default class Primitive {
   public _ready: boolean
   private _batchTable: undefined | BatchTable
   public _batchTableAttributeIndices: AttributeIndices | undefined
-  public _offsetInstanceExtend: undefined
+  public _offsetInstanceExtend: undefined | GeometryOffsetAttribute[]
   public _batchTableOffsetAttribute2DIndex: undefined | number
   public _batchTableOffsetsUpdated: boolean
-  public _instanceBoundingSpheres: undefined
-  public _instanceBoundingSpheresCV: undefined
-  public _tempBoundingSpheres: undefined
+  public _instanceBoundingSpheres!: BoundingSphere[]
+  public _instanceBoundingSpheresCV: undefined | BoundingSphere[]
+  public _tempBoundingSpheres: undefined | BoundingSphere[]
   public _recomputeBoundingSpheres: boolean
-  public _batchTableBoundingSphereUpdated: boolean
+  public _batchTableBoundingSpheresUpdated: boolean
   public _batchTableBoundingSphereAttributeIndices:
     | BoundingSphereAttributeIndices
     | undefined
@@ -156,10 +175,10 @@ export default class Primitive {
     this._perInstanceAttributeCache = new Map()
     this._instanceIds = []
     this._lastPerInstanceAttributeIndex = 0
+    this._createBoundingVolumeFunction = options.createBoundingVolumeFunction
 
     this._va = []
     this._attributeLocations = undefined
-    this._primitiveType = undefined
 
     this._frontFaceRS = undefined
     this._backFaceRS = undefined
@@ -179,16 +198,17 @@ export default class Primitive {
 
     this._ready = false
 
+    this._createPickOffsets = options._createPickOffsets || false
+
     this._batchTable = undefined
     this._batchTableAttributeIndices = undefined
     this._offsetInstanceExtend = undefined
     this._batchTableOffsetAttribute2DIndex = undefined
     this._batchTableOffsetsUpdated = false
-    this._instanceBoundingSpheres = undefined
     this._instanceBoundingSpheresCV = undefined
     this._tempBoundingSpheres = undefined
     this._recomputeBoundingSpheres = false
-    this._batchTableBoundingSphereUpdated = false
+    this._batchTableBoundingSpheresUpdated = false
     this._batchTableBoundingSphereAttributeIndices = undefined
   }
 
@@ -236,13 +256,376 @@ export default class Primitive {
         this._loadSynchronous(frameState)
       }
     }
+
+    if (this._state === PrimitiveState.COMBINED) {
+      this._updateBatchTableBoundingSpheres(this, frameState)
+      this._updateBatchTableOffsets(this, frameState)
+      this._createVertexArray(this, frameState)
+    }
+
+    if (!this.show || this._state !== PrimitiveState.COMPLETE) {
+      return
+    }
+
+    if (!this._batchTableOffsetsUpdated) {
+      this._updateBatchTableOffsets(this, frameState)
+    }
+    if (this._recomputeBoundingSpheres) {
+      this.recomputeBoundingSpheres(this, frameState)
+    }
+  }
+
+  private recomputeBoundingSpheres(
+    primitive: Primitive,
+    frameState: FrameState
+  ) {
+    const offsetIndex = primitive._batchTableAttributeIndices!.offset
+    if (!primitive._recomputeBoundingSpheres || !Defined(offsetIndex)) {
+      primitive._recomputeBoundingSpheres = false
+      return
+    }
+
+    let i
+    const offsetInstanceExtend = primitive._offsetInstanceExtend!
+    const boundingSpheres = primitive._instanceBoundingSpheres
+    const length = boundingSpheres.length
+    let newBoundingSpheres = primitive._tempBoundingSpheres
+
+    if (!Defined(newBoundingSpheres)) {
+      newBoundingSpheres = new Array(length)
+      for (i = 0; i < length; i++) {
+        newBoundingSpheres[i] = new BoundingSphere()
+      }
+      primitive._tempBoundingSpheres = newBoundingSpheres
+    }
+
+    for (i = 0; i < length; ++i) {
+      let newBS = newBoundingSpheres[i]
+      const offset = primitive._batchTable!.getBatchedAttribute(
+        i,
+        offsetIndex
+      ) as Cartesian3
+      newBS = boundingSpheres[i].clone(newBS)
+      this._transformBoundingSphere(newBS, offset, offsetInstanceExtend[i])
+    }
+    const combinedBS = []
+    const combinedWestBS = []
+    const combinedEastBS = []
+
+    for (i = 0; i < length; ++i) {
+      const bs = newBoundingSpheres[i]
+
+      const minX = bs.center.x - bs.radius
+      if (
+        minX > 0 ||
+        BoundingSphere.intersectPlane(bs, Plane.ORIGIN_ZX_PLANE) !==
+          Intersect.INTERSECTING
+      ) {
+        combinedBS.push(bs)
+      } else {
+        combinedWestBS.push(bs)
+        combinedEastBS.push(bs)
+      }
+    }
+
+    let resultBS1 = combinedBS[0]
+    let resultBS2 = combinedEastBS[0]
+    let resultBS3 = combinedWestBS[0]
+
+    for (i = 1; i < combinedBS.length; i++) {
+      resultBS1 = BoundingSphere.union(resultBS1, combinedBS[i])
+    }
+    for (i = 1; i < combinedEastBS.length; i++) {
+      resultBS2 = BoundingSphere.union(resultBS2, combinedEastBS[i])
+    }
+    for (i = 1; i < combinedWestBS.length; i++) {
+      resultBS3 = BoundingSphere.union(resultBS3, combinedWestBS[i])
+    }
+    const result = []
+    if (Defined(resultBS1)) {
+      result.push(resultBS1)
+    }
+    if (Defined(resultBS2)) {
+      result.push(resultBS2)
+    }
+    if (Defined(resultBS3)) {
+      result.push(resultBS3)
+    }
+    for (i = 0; i < result.length; i++) {
+      const boundingSphere = result[i].clone(primitive._boundingSpheres[i])
+      primitive._boundingSpheres[i] = boundingSphere
+      primitive._boundingSphereCV[i] = BoundingSphere.projectTo2D(
+        boundingSphere,
+        frameState.mapProjection!,
+        primitive._boundingSphereCV[i]
+      )
+    }
+    this._updateBoundingVolumes(
+      primitive,
+      frameState,
+      primitive.modelMatrix,
+      true
+    )
+    primitive._recomputeBoundingSpheres = false
+  }
+
+  private _updateBoundingVolumes(
+    primitive: Primitive,
+    frameState: FrameState,
+    modelMatrix: Matrix4,
+    forceUpdate?: boolean
+  ) {
+    let i
+    let length
+    let boundingSphere
+
+    if (forceUpdate || !Matrix4.equals(modelMatrix, primitive._modelMatrix)) {
+      Matrix4.clone(modelMatrix, primitive._modelMatrix)
+      length = primitive._boundingSpheres.length
+
+      for (i = 0; i < length; ++i) {
+        boundingSphere = primitive._boundingSpheres[i]
+        if (Defined(boundingSphere)) {
+          primitive._boundingSphereWC[i] = BoundingSphere.transform(
+            boundingSphere,
+            modelMatrix,
+            primitive._boundingSphereWC[i]
+          )
+          if (!frameState.scene3DOnly) {
+            primitive._boundingSphere2D[i] = BoundingSphere.clone(
+              primitive._boundingSphereCV[i],
+              primitive._boundingSphere2D[i]
+            )
+            primitive._boundingSphere2D[i].center.x = 0.0
+            primitive._boundingSphereMorph[i] = BoundingSphere.union(
+              primitive._boundingSphereWC[i],
+              primitive._boundingSphereCV[i]
+            )
+          }
+        }
+      }
+    }
+
+    // Update bounding volumes for primitives that are sized in pixels.
+    // The pixel size in meters varies based on the distance from the camera.
+    const pixelSize = primitive.appearance.pixelSize
+    if (Defined(pixelSize)) {
+      length = primitive._boundingSpheres.length
+      for (i = 0; i < length; ++i) {
+        boundingSphere = primitive._boundingSpheres[i]
+        const boundingSphereWC = primitive._boundingSphereWC[i]
+        const pixelSizeInMeters = frameState.camera!.getPixelSize(
+          boundingSphere,
+          frameState.context.drawingBufferWidth,
+          frameState.context.drawingBufferHeight
+        )
+        const sizeInMeters = pixelSizeInMeters * pixelSize
+        boundingSphereWC.radius = boundingSphere.radius + sizeInMeters
+      }
+    }
+  }
+
+  private _transformBoundingSphere(
+    boundingSphere: BoundingSphere,
+    offset: Cartesian3,
+    offsetAttribute: GeometryOffsetAttribute
+  ) {
+    if (offsetAttribute === GeometryOffsetAttribute.TOP) {
+      const origBS = BoundingSphere.clone(boundingSphere)
+      const offsetBS = BoundingSphere.clone(boundingSphere)
+      offsetBS.center = Cartesian3.add(offsetBS.center, offset, offsetBS.center)
+      boundingSphere = BoundingSphere.union(origBS, offsetBS, boundingSphere)
+    } else if (offsetAttribute === GeometryOffsetAttribute.ALL) {
+      boundingSphere.center = Cartesian3.add(
+        boundingSphere.center,
+        offset,
+        boundingSphere.center
+      )
+    }
+    return boundingSphere
+  }
+
+  private _createVertexArray(primitive: Primitive, frameState: FrameState) {
+    const attributeLocations = primitive._attributeLocations!
+    const geometries = primitive._geometries as Geometry[]
+    const scene3DOnly = frameState.scene3DOnly
+    const context = frameState.context
+
+    const va: VertexArray[] = []
+    const length = geometries.length
+
+    for (let i = 0; i < length; ++i) {
+      const geometry = geometries[i]
+
+      va.push(
+        VertexArray.fromGeometry({
+          context: context,
+          geometry: geometry,
+          attributeLocations: attributeLocations,
+          bufferUsage: BufferUsage.STATIC_DRAW,
+          interleave: primitive._interleave
+        })
+      )
+
+      if (Defined(primitive._createBoundingVolumeFunction)) {
+        primitive._createBoundingVolumeFunction(frameState, geometry)
+      } else {
+        primitive._boundingSpheres.push(
+          BoundingSphere.clone(geometry.boundingSphere)
+        )
+        primitive._boundingSphereWC.push(new BoundingSphere())
+
+        if (!scene3DOnly) {
+          const center = geometry.boundingSphereCV!.center
+          const x = center.x
+          const y = center.y
+          const z = center.z
+          center.x = z
+          center.y = x
+          center.z = y
+
+          primitive._boundingSphereCV.push(
+            BoundingSphere.clone(geometry.boundingSphereCV!)
+          )
+          primitive._boundingSphere2D.push(new BoundingSphere())
+          primitive._boundingSphereMorph.push(new BoundingSphere())
+        }
+      }
+    }
+
+    primitive._va = va
+    primitive._primitiveType = geometries[0].primitiveType
+
+    if (primitive.releaseGeometryInstances) {
+      primitive.geometryInstances = undefined
+    }
+    primitive._geometries = undefined
+    this._setReady(primitive, frameState, PrimitiveState.COMPLETE, undefined)
+  }
+  private _updateBatchTableOffsets(
+    primitive: Primitive,
+    frameState: FrameState
+  ) {
+    const hasOffset = Defined(primitive._batchTableAttributeIndices?.offset)
+    if (
+      !hasOffset ||
+      primitive._batchTableOffsetsUpdated ||
+      frameState.scene3DOnly
+    ) {
+      return
+    }
+
+    const index2D = primitive._batchTableOffsetAttribute2DIndex
+
+    const projection = frameState.mapProjection!
+    const ellipsoid = projection.ellipsoid
+
+    const batchTable = primitive._batchTable!
+    const boundingSpheres = primitive._instanceBoundingSpheres!
+    const length = boundingSpheres.length
+
+    for (let i = 0; i < length; ++i) {
+      let boundingSphere = boundingSpheres[i]
+      if (!Defined(boundingSphere)) {
+        continue
+      }
+      const offset = batchTable.getBatchedAttribute(
+        i,
+        primitive._batchTableAttributeIndices!.offset
+      ) as Cartesian3
+      if (Cartesian3.equals(offset, Cartesian3.ZERO)) {
+        batchTable.setBatchedAttribute(i, index2D!, Cartesian3.ZERO)
+        continue
+      }
+
+      const modelMatrix = primitive.modelMatrix
+      if (Defined(modelMatrix)) {
+        boundingSphere = BoundingSphere.transform(boundingSphere, modelMatrix)
+      }
+
+      let center = boundingSphere.center
+      center = ellipsoid.scaleToGeodeticSurface(center)!
+      let cartographic = ellipsoid.cartesianToCartographic(center)
+      const center2D = projection.project(cartographic)
+
+      const newPoint = Cartesian3.add(offset, center)
+      cartographic = ellipsoid.cartesianToCartographic(newPoint, cartographic)
+
+      const newPointProjected = projection.project(cartographic)
+
+      const newVector = Cartesian3.subtract(newPointProjected, center2D)
+
+      const x = newVector.x
+      newVector.x = newVector.z
+      newVector.z = newVector.y
+      newVector.y = x
+
+      batchTable.setBatchedAttribute(i, index2D!, newVector)
+    }
+    primitive._batchTableOffsetsUpdated = true
+  }
+  private _updateBatchTableBoundingSpheres(
+    primitive: Primitive,
+    frameState: FrameState
+  ) {
+    const hasDistanceDisplayCondition = Defined(
+      primitive._batchTableAttributeIndices?.distanceDisplayCondition
+    )
+    if (
+      !hasDistanceDisplayCondition ||
+      primitive._batchTableBoundingSpheresUpdated
+    ) {
+      return
+    }
+
+    const indices = primitive._batchTableBoundingSphereAttributeIndices!
+    const center3DHighIndex = indices.center3DHigh
+    const center3DLowIndex = indices.center3DLow
+    const center2DHighIndex = indices.center2DHigh
+    const center2DLowIndex = indices.center2DLow
+    const radiusIndex = indices.radius
+
+    const projection = frameState.mapProjection!
+    const ellipsoid = projection.ellipsoid
+
+    const batchTable = primitive._batchTable!
+    const boundingSpheres = primitive._instanceBoundingSpheres!
+    const length = boundingSpheres.length
+
+    for (let i = 0; i < length; i++) {
+      let boundingSphere = boundingSpheres[i]
+      if (!Defined(boundingSphere)) {
+        continue
+      }
+      const modelMatrix = primitive.modelMatrix
+      if (Defined(modelMatrix)) {
+        boundingSphere = BoundingSphere.transform(boundingSphere, modelMatrix)
+      }
+
+      const center = boundingSphere.center
+      const radius = boundingSphere.radius
+
+      let encodedCenter = EncodedCartesian3.fromCartesian(center)
+      batchTable.setBatchedAttribute(i, center3DHighIndex, encodedCenter.high)
+      batchTable.setBatchedAttribute(i, center3DLowIndex, encodedCenter.low)
+
+      if (!frameState.scene3DOnly) {
+        const cartographic = ellipsoid.cartesianToCartographic(center)
+        const center2D = projection.project(cartographic)
+        encodedCenter = EncodedCartesian3.fromCartesian(center2D)
+        batchTable.setBatchedAttribute(i, center2DHighIndex, encodedCenter.high)
+        batchTable.setBatchedAttribute(i, center2DLowIndex, encodedCenter.low)
+      }
+      batchTable.setBatchedAttribute(i, radiusIndex, radius)
+    }
+    primitive._batchTableBoundingSpheresUpdated = true
   }
 
   private _loadAsynchronous(frameState: FrameState) {}
   private _loadSynchronous(frameState: FrameState) {
     const instances = Array.isArray(this.geometryInstances)
       ? this.geometryInstances
-      : [this.geometryInstances]
+      : ([this.geometryInstances] as GeometryInstance[])
     const length = (this._numberOfInstances = instances.length)
     const clonedInstances = new Array(length)
     const instanceIds = this._instanceIds
@@ -270,10 +653,10 @@ export default class Primitive {
       instanceIds.push(instance.id)
     }
 
-    clonedInstances.length = geometryIndex;
+    clonedInstances.length = geometryIndex
 
-    const scene3DOnly = frameState.scene3DOnly;
-    const projection = frameState.mapProjection;
+    const scene3DOnly = frameState.scene3DOnly
+    const projection = frameState.mapProjection
 
     const result = PrimitivePipeline.combineGeometry({
       instances: clonedInstances,
@@ -284,8 +667,38 @@ export default class Primitive {
       vertexCacheOptimize: this.vertexCacheOptimize,
       compressVertices: this.compressVertices,
       modelMatrix: this.modelMatrix,
-      createPickOffsets: this._createPickOffsets,
-    });
+      createPickOffsets: this._createPickOffsets
+    })
+    this._geometries = result.geometries
+    this._attributeLocations = result.attributeLocations
+    this.modelMatrix = Matrix4.clone(result.modelMatrix, this.modelMatrix)
+    this._pickOffsets = result.pickOffsets
+    this._offsetInstanceExtend = result.offsetInstanceExtend
+    this._instanceBoundingSpheres = result.boundingSpheres
+    this._instanceBoundingSpheresCV = result.boundingSpheresCV
+
+    if (Defined(this._geometries) && this._geometries.length > 0) {
+      this._recomputeBoundingSpheres = true
+      this._state = PrimitiveState.COMBINED
+    } else {
+      this._setReady(this, frameState, PrimitiveState.FAILED, undefined)
+    }
+  }
+
+  private _setReady(
+    primitive: Primitive,
+    frameState: FrameState,
+    state: PrimitiveState,
+    error?: string
+  ) {
+    primitive._state = state
+    primitive._error = error
+
+    frameState.afterRender.push(function () {
+      primitive._ready =
+        primitive._state === PrimitiveState.COMPLETE ||
+        primitive._state === PrimitiveState.FAILED
+    })
   }
 
   private _cloneInstance(instance: GeometryInstance, geometry: Geometry) {
@@ -294,7 +707,7 @@ export default class Primitive {
       id: instance.id,
       modelMatrix: Matrix4.clone(instance.modelMatrix),
       pickPrimitive: instance.pickPrimitive,
-      attributes: instance.attributes,
+      attributes: instance.attributes
     })
   }
 
@@ -307,7 +720,9 @@ export default class Primitive {
         attributes.hasOwnProperty(property) &&
         Defined(attributes[property as GeometryAttributeType])
       ) {
-        newAttributes[property as GeometryAttributeType] = this._cloneAttribute(attributes[property as GeometryAttributeType]!)
+        newAttributes[property as GeometryAttributeType] = this._cloneAttribute(
+          attributes[property as GeometryAttributeType]!
+        )
       }
     }
 
@@ -331,10 +746,9 @@ export default class Primitive {
   }
 
   private _cloneAttribute(attribute: GeometryAttribute) {
-    
-    let clonedValues;
+    let clonedValues
     // if (Array.isArray(attribute.values)) {
-      clonedValues = attribute.values.slice(0);
+    clonedValues = attribute.values.slice(0)
     // } else {
     //   clonedValues = [attribute.values];
     // }
@@ -342,15 +756,15 @@ export default class Primitive {
       componentDatatype: attribute.componentDatatype,
       componentsPerAttribute: attribute.componentsPerAttribute,
       normalize: attribute.normalize,
-      values: clonedValues,
-    });
+      values: clonedValues
+    })
   }
 
   private _createBatchTable(context: Context) {
     const geometryInstances = this.geometryInstances
     const instances = Array.isArray(geometryInstances)
       ? geometryInstances
-      : [geometryInstances]
+      : ([geometryInstances] as GeometryInstance[])
     const numberOfInstances = instances.length
     if (numberOfInstances === 0) {
       return

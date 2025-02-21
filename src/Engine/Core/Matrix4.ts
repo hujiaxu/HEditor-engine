@@ -100,10 +100,18 @@ export default class Matrix4 {
   static transpose: (matrix: Matrix4, result?: Matrix4) => Matrix4
   static inverse: (matrix: Matrix4, result?: Matrix4) => Matrix4 | undefined
   static getMatrix3: (matrix: Matrix4, result?: Matrix3) => Matrix3
-  static getRow: (matrix: Matrix4, index: number, result?: Cartesian4) => Cartesian4
+  static getRow: (
+    matrix: Matrix4,
+    index: number,
+    result?: Cartesian4
+  ) => Cartesian4
   static getScale: (matrix: Matrix4, result?: Cartesian3) => Cartesian3
   static getMaximumScale: (matrix: Matrix4) => number
-  static multiplyTransformation: (matrix: Matrix4, transformation: Matrix4, result?: Matrix4) => Matrix4
+  static multiplyTransformation: (
+    matrix: Matrix4,
+    transformation: Matrix4,
+    result?: Matrix4
+  ) => Matrix4
 
   get values() {
     return this._values
@@ -810,147 +818,147 @@ Matrix4.transpose = function (matrix: Matrix4, result?: Matrix4) {
   return result
 }
 
-const scratchInverseRotation = new Matrix3();
-const scratchMatrix3Zero = new Matrix3();
-const scratchBottomRow = new Cartesian4();
-const scratchExpectedBottomRow = new Cartesian4(0.0, 0.0, 0.0, 1.0);
+const scratchInverseRotation = new Matrix3()
+const scratchMatrix3Zero = new Matrix3()
+const scratchBottomRow = new Cartesian4()
+const scratchExpectedBottomRow = new Cartesian4(0.0, 0.0, 0.0, 1.0)
 
 Matrix4.inverse = function (matrix: Matrix4, result?: Matrix4) {
   if (!result) {
     result = new Matrix4()
   }
-  
-  const src0 = matrix.values[0];
-  const src1 = matrix.values[4];
-  const src2 = matrix.values[8];
-  const src3 = matrix.values[12];
-  const src4 = matrix.values[1];
-  const src5 = matrix.values[5];
-  const src6 = matrix.values[9];
-  const src7 = matrix.values[13];
-  const src8 = matrix.values[2];
-  const src9 = matrix.values[6];
-  const src10 = matrix.values[10];
-  const src11 = matrix.values[14];
-  const src12 = matrix.values[3];
-  const src13 = matrix.values[7];
-  const src14 = matrix.values[11];
-  const src15 = matrix.values[15];
+
+  const src0 = matrix.values[0]
+  const src1 = matrix.values[4]
+  const src2 = matrix.values[8]
+  const src3 = matrix.values[12]
+  const src4 = matrix.values[1]
+  const src5 = matrix.values[5]
+  const src6 = matrix.values[9]
+  const src7 = matrix.values[13]
+  const src8 = matrix.values[2]
+  const src9 = matrix.values[6]
+  const src10 = matrix.values[10]
+  const src11 = matrix.values[14]
+  const src12 = matrix.values[3]
+  const src13 = matrix.values[7]
+  const src14 = matrix.values[11]
+  const src15 = matrix.values[15]
 
   // calculate pairs for first 8 elements (cofactors)
-  let tmp0 = src10 * src15;
-  let tmp1 = src11 * src14;
-  let tmp2 = src9 * src15;
-  let tmp3 = src11 * src13;
-  let tmp4 = src9 * src14;
-  let tmp5 = src10 * src13;
-  let tmp6 = src8 * src15;
-  let tmp7 = src11 * src12;
-  let tmp8 = src8 * src14;
-  let tmp9 = src10 * src12;
-  let tmp10 = src8 * src13;
-  let tmp11 = src9 * src12;
+  let tmp0 = src10 * src15
+  let tmp1 = src11 * src14
+  let tmp2 = src9 * src15
+  let tmp3 = src11 * src13
+  let tmp4 = src9 * src14
+  let tmp5 = src10 * src13
+  let tmp6 = src8 * src15
+  let tmp7 = src11 * src12
+  let tmp8 = src8 * src14
+  let tmp9 = src10 * src12
+  let tmp10 = src8 * src13
+  let tmp11 = src9 * src12
 
   // calculate first 8 elements (cofactors)
   const dst0 =
     tmp0 * src5 +
     tmp3 * src6 +
     tmp4 * src7 -
-    (tmp1 * src5 + tmp2 * src6 + tmp5 * src7);
+    (tmp1 * src5 + tmp2 * src6 + tmp5 * src7)
   const dst1 =
     tmp1 * src4 +
     tmp6 * src6 +
     tmp9 * src7 -
-    (tmp0 * src4 + tmp7 * src6 + tmp8 * src7);
+    (tmp0 * src4 + tmp7 * src6 + tmp8 * src7)
   const dst2 =
     tmp2 * src4 +
     tmp7 * src5 +
     tmp10 * src7 -
-    (tmp3 * src4 + tmp6 * src5 + tmp11 * src7);
+    (tmp3 * src4 + tmp6 * src5 + tmp11 * src7)
   const dst3 =
     tmp5 * src4 +
     tmp8 * src5 +
     tmp11 * src6 -
-    (tmp4 * src4 + tmp9 * src5 + tmp10 * src6);
+    (tmp4 * src4 + tmp9 * src5 + tmp10 * src6)
   const dst4 =
     tmp1 * src1 +
     tmp2 * src2 +
     tmp5 * src3 -
-    (tmp0 * src1 + tmp3 * src2 + tmp4 * src3);
+    (tmp0 * src1 + tmp3 * src2 + tmp4 * src3)
   const dst5 =
     tmp0 * src0 +
     tmp7 * src2 +
     tmp8 * src3 -
-    (tmp1 * src0 + tmp6 * src2 + tmp9 * src3);
+    (tmp1 * src0 + tmp6 * src2 + tmp9 * src3)
   const dst6 =
     tmp3 * src0 +
     tmp6 * src1 +
     tmp11 * src3 -
-    (tmp2 * src0 + tmp7 * src1 + tmp10 * src3);
+    (tmp2 * src0 + tmp7 * src1 + tmp10 * src3)
   const dst7 =
     tmp4 * src0 +
     tmp9 * src1 +
     tmp10 * src2 -
-    (tmp5 * src0 + tmp8 * src1 + tmp11 * src2);
+    (tmp5 * src0 + tmp8 * src1 + tmp11 * src2)
 
   // calculate pairs for second 8 elements (cofactors)
-  tmp0 = src2 * src7;
-  tmp1 = src3 * src6;
-  tmp2 = src1 * src7;
-  tmp3 = src3 * src5;
-  tmp4 = src1 * src6;
-  tmp5 = src2 * src5;
-  tmp6 = src0 * src7;
-  tmp7 = src3 * src4;
-  tmp8 = src0 * src6;
-  tmp9 = src2 * src4;
-  tmp10 = src0 * src5;
-  tmp11 = src1 * src4;
+  tmp0 = src2 * src7
+  tmp1 = src3 * src6
+  tmp2 = src1 * src7
+  tmp3 = src3 * src5
+  tmp4 = src1 * src6
+  tmp5 = src2 * src5
+  tmp6 = src0 * src7
+  tmp7 = src3 * src4
+  tmp8 = src0 * src6
+  tmp9 = src2 * src4
+  tmp10 = src0 * src5
+  tmp11 = src1 * src4
 
   // calculate second 8 elements (cofactors)
   const dst8 =
     tmp0 * src13 +
     tmp3 * src14 +
     tmp4 * src15 -
-    (tmp1 * src13 + tmp2 * src14 + tmp5 * src15);
+    (tmp1 * src13 + tmp2 * src14 + tmp5 * src15)
   const dst9 =
     tmp1 * src12 +
     tmp6 * src14 +
     tmp9 * src15 -
-    (tmp0 * src12 + tmp7 * src14 + tmp8 * src15);
+    (tmp0 * src12 + tmp7 * src14 + tmp8 * src15)
   const dst10 =
     tmp2 * src12 +
     tmp7 * src13 +
     tmp10 * src15 -
-    (tmp3 * src12 + tmp6 * src13 + tmp11 * src15);
+    (tmp3 * src12 + tmp6 * src13 + tmp11 * src15)
   const dst11 =
     tmp5 * src12 +
     tmp8 * src13 +
     tmp11 * src14 -
-    (tmp4 * src12 + tmp9 * src13 + tmp10 * src14);
+    (tmp4 * src12 + tmp9 * src13 + tmp10 * src14)
   const dst12 =
     tmp2 * src10 +
     tmp5 * src11 +
     tmp1 * src9 -
-    (tmp4 * src11 + tmp0 * src9 + tmp3 * src10);
+    (tmp4 * src11 + tmp0 * src9 + tmp3 * src10)
   const dst13 =
     tmp8 * src11 +
     tmp0 * src8 +
     tmp7 * src10 -
-    (tmp6 * src10 + tmp9 * src11 + tmp1 * src8);
+    (tmp6 * src10 + tmp9 * src11 + tmp1 * src8)
   const dst14 =
     tmp6 * src9 +
     tmp11 * src11 +
     tmp3 * src8 -
-    (tmp10 * src11 + tmp2 * src8 + tmp7 * src9);
+    (tmp10 * src11 + tmp2 * src8 + tmp7 * src9)
   const dst15 =
     tmp10 * src10 +
     tmp4 * src8 +
     tmp9 * src9 -
-    (tmp8 * src9 + tmp11 * src10 + tmp5 * src8);
+    (tmp8 * src9 + tmp11 * src10 + tmp5 * src8)
 
   // calculate determinant
-  let det = src0 * dst0 + src1 * dst1 + src2 * dst2 + src3 * dst3;
+  let det = src0 * dst0 + src1 * dst1 + src2 * dst2 + src3 * dst3
 
   if (Math.abs(det) < HEditorMath.EPSILON21) {
     // Special case for a zero scale matrix that can occur, for example,
@@ -959,58 +967,55 @@ Matrix4.inverse = function (matrix: Matrix4, result?: Matrix4) {
       Matrix3.equalsEpsilon(
         Matrix4.getMatrix3(matrix, scratchInverseRotation),
         scratchMatrix3Zero,
-        HEditorMath.EPSILON7,
+        HEditorMath.EPSILON7
       ) &&
       Cartesian4.equals(
         Matrix4.getRow(matrix, 3, scratchBottomRow),
-        scratchExpectedBottomRow,
+        scratchExpectedBottomRow
       )
     ) {
-      result.values[0] = 0.0;
-      result.values[1] = 0.0;
-      result.values[2] = 0.0;
-      result.values[3] = 0.0;
-      result.values[4] = 0.0;
-      result.values[5] = 0.0;
-      result.values[6] = 0.0;
-      result.values[7] = 0.0;
-      result.values[8] = 0.0;
-      result.values[9] = 0.0;
-      result.values[10] = 0.0;
-      result.values[11] = 0.0;
-      result.values[12] = -matrix.values[12];
-      result.values[13] = -matrix.values[13];
-      result.values[14] = -matrix.values[14];
-      result.values[15] = 1.0;
-      return result;
+      result.values[0] = 0.0
+      result.values[1] = 0.0
+      result.values[2] = 0.0
+      result.values[3] = 0.0
+      result.values[4] = 0.0
+      result.values[5] = 0.0
+      result.values[6] = 0.0
+      result.values[7] = 0.0
+      result.values[8] = 0.0
+      result.values[9] = 0.0
+      result.values[10] = 0.0
+      result.values[11] = 0.0
+      result.values[12] = -matrix.values[12]
+      result.values[13] = -matrix.values[13]
+      result.values[14] = -matrix.values[14]
+      result.values[15] = 1.0
+      return result
     }
 
-    throw new Error(
-      "matrix is not invertible because its determinate is zero.",
-    );
+    throw new Error('matrix is not invertible because its determinate is zero.')
   }
 
   // calculate matrix inverse
-  det = 1.0 / det;
+  det = 1.0 / det
 
-  result.values[0] = dst0 * det;
-  result.values[1] = dst1 * det;
-  result.values[2] = dst2 * det;
-  result.values[3] = dst3 * det;
-  result.values[4] = dst4 * det;
-  result.values[5] = dst5 * det;
-  result.values[6] = dst6 * det;
-  result.values[7] = dst7 * det;
-  result.values[8] = dst8 * det;
-  result.values[9] = dst9 * det;
-  result.values[10] = dst10 * det;
-  result.values[11] = dst11 * det;
-  result.values[12] = dst12 * det;
-  result.values[13] = dst13 * det;
-  result.values[14] = dst14 * det;
-  result.values[15] = dst15 * det;
-  return result;
-
+  result.values[0] = dst0 * det
+  result.values[1] = dst1 * det
+  result.values[2] = dst2 * det
+  result.values[3] = dst3 * det
+  result.values[4] = dst4 * det
+  result.values[5] = dst5 * det
+  result.values[6] = dst6 * det
+  result.values[7] = dst7 * det
+  result.values[8] = dst8 * det
+  result.values[9] = dst9 * det
+  result.values[10] = dst10 * det
+  result.values[11] = dst11 * det
+  result.values[12] = dst12 * det
+  result.values[13] = dst13 * det
+  result.values[14] = dst14 * det
+  result.values[15] = dst15 * det
+  return result
 }
 Matrix4.getMatrix3 = function (matrix: Matrix4, result?: Matrix3) {
   if (!result) {
@@ -1027,7 +1032,11 @@ Matrix4.getMatrix3 = function (matrix: Matrix4, result?: Matrix3) {
   result.values[8] = matrix.values[10]
   return result
 }
-Matrix4.getRow = function (matrix: Matrix4, index: number, result?: Cartesian4) {
+Matrix4.getRow = function (
+  matrix: Matrix4,
+  index: number,
+  result?: Cartesian4
+) {
   if (!result) {
     result = new Cartesian4()
   }
@@ -1043,71 +1052,91 @@ Matrix4.getScale = function (matrix: Matrix4, result?: Cartesian3) {
   if (!result) {
     result = new Cartesian3()
   }
-  result.x = Cartesian3.magnitude(Cartesian3.fromElements(matrix.values[0], matrix.values[1], matrix.values[2]))
-  result.y = Cartesian3.magnitude(Cartesian3.fromElements(matrix.values[4], matrix.values[5], matrix.values[6]))
-  result.z = Cartesian3.magnitude(Cartesian3.fromElements(matrix.values[8], matrix.values[9], matrix.values[10]))
+  result.x = Cartesian3.magnitude(
+    Cartesian3.fromElements(
+      matrix.values[0],
+      matrix.values[1],
+      matrix.values[2]
+    )
+  )
+  result.y = Cartesian3.magnitude(
+    Cartesian3.fromElements(
+      matrix.values[4],
+      matrix.values[5],
+      matrix.values[6]
+    )
+  )
+  result.z = Cartesian3.magnitude(
+    Cartesian3.fromElements(
+      matrix.values[8],
+      matrix.values[9],
+      matrix.values[10]
+    )
+  )
   return result
 }
 
-const scaleScratch3 = new Cartesian3();
+const scaleScratch3 = new Cartesian3()
 
 Matrix4.getMaximumScale = function (matrix: Matrix4) {
-
-  Matrix4.getScale(matrix, scaleScratch3);
-  return Cartesian3.maximumComponent(scaleScratch3);
+  Matrix4.getScale(matrix, scaleScratch3)
+  return Cartesian3.maximumComponent(scaleScratch3)
 }
 
 // 目的: 快速计算两个仿射变换的乘积, 结果是一个仿射变换, 仿射变换矩阵的最后一行固定 [0, 0, 0, 1]
-Matrix4.multiplyTransformation = function (left: Matrix4, right: Matrix4, result?: Matrix4) {
+Matrix4.multiplyTransformation = function (
+  left: Matrix4,
+  right: Matrix4,
+  result?: Matrix4
+) {
   if (!result) {
     result = new Matrix4()
   }
-  
 
-  const left0 = left.values[0];
-  const left1 = left.values[1];
-  const left2 = left.values[2];
-  const left4 = left.values[4];
-  const left5 = left.values[5];
-  const left6 = left.values[6];
-  const left8 = left.values[8];
-  const left9 = left.values[9];
-  const left10 = left.values[10];
-  const left12 = left.values[12];
-  const left13 = left.values[13];
-  const left14 = left.values[14];
+  const left0 = left.values[0]
+  const left1 = left.values[1]
+  const left2 = left.values[2]
+  const left4 = left.values[4]
+  const left5 = left.values[5]
+  const left6 = left.values[6]
+  const left8 = left.values[8]
+  const left9 = left.values[9]
+  const left10 = left.values[10]
+  const left12 = left.values[12]
+  const left13 = left.values[13]
+  const left14 = left.values[14]
 
-  const right0 = right.values[0];
-  const right1 = right.values[1];
-  const right2 = right.values[2];
-  const right4 = right.values[4];
-  const right5 = right.values[5];
-  const right6 = right.values[6];
-  const right8 = right.values[8];
-  const right9 = right.values[9];
-  const right10 = right.values[10];
-  const right12 = right.values[12];
-  const right13 = right.values[13];
-  const right14 = right.values[14];
+  const right0 = right.values[0]
+  const right1 = right.values[1]
+  const right2 = right.values[2]
+  const right4 = right.values[4]
+  const right5 = right.values[5]
+  const right6 = right.values[6]
+  const right8 = right.values[8]
+  const right9 = right.values[9]
+  const right10 = right.values[10]
+  const right12 = right.values[12]
+  const right13 = right.values[13]
+  const right14 = right.values[14]
 
-  const column0Row0 = left0 * right0 + left4 * right1 + left8 * right2;
-  const column0Row1 = left1 * right0 + left5 * right1 + left9 * right2;
-  const column0Row2 = left2 * right0 + left6 * right1 + left10 * right2;
+  const column0Row0 = left0 * right0 + left4 * right1 + left8 * right2
+  const column0Row1 = left1 * right0 + left5 * right1 + left9 * right2
+  const column0Row2 = left2 * right0 + left6 * right1 + left10 * right2
 
-  const column1Row0 = left0 * right4 + left4 * right5 + left8 * right6;
-  const column1Row1 = left1 * right4 + left5 * right5 + left9 * right6;
-  const column1Row2 = left2 * right4 + left6 * right5 + left10 * right6;
+  const column1Row0 = left0 * right4 + left4 * right5 + left8 * right6
+  const column1Row1 = left1 * right4 + left5 * right5 + left9 * right6
+  const column1Row2 = left2 * right4 + left6 * right5 + left10 * right6
 
-  const column2Row0 = left0 * right8 + left4 * right9 + left8 * right10;
-  const column2Row1 = left1 * right8 + left5 * right9 + left9 * right10;
-  const column2Row2 = left2 * right8 + left6 * right9 + left10 * right10;
+  const column2Row0 = left0 * right8 + left4 * right9 + left8 * right10
+  const column2Row1 = left1 * right8 + left5 * right9 + left9 * right10
+  const column2Row2 = left2 * right8 + left6 * right9 + left10 * right10
 
   const column3Row0 =
-    left0 * right12 + left4 * right13 + left8 * right14 + left12;
+    left0 * right12 + left4 * right13 + left8 * right14 + left12
   const column3Row1 =
-    left1 * right12 + left5 * right13 + left9 * right14 + left13;
+    left1 * right12 + left5 * right13 + left9 * right14 + left13
   const column3Row2 =
-    left2 * right12 + left6 * right13 + left10 * right14 + left14;
+    left2 * right12 + left6 * right13 + left10 * right14 + left14
 
   result.values[0] = column0Row0
   result.values[1] = column0Row1

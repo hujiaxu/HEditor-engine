@@ -7,10 +7,10 @@ const HEditorMath = {
   PI_OVER_TWO: Math.PI / 2.0,
   SIXTY_FOUR_KILOBYTES: 64 * 1024,
   toSNorm: function (value: number, rangeMaximum: number): number {
-    rangeMaximum = defaultValue(rangeMaximum, 255);
+    rangeMaximum = defaultValue(rangeMaximum, 255)
     return Math.round(
-      (HEditorMath.clamp(value, -1.0, 1.0) * 0.5 + 0.5) * rangeMaximum,
-    );
+      (HEditorMath.clamp(value, -1.0, 1.0) * 0.5 + 0.5) * rangeMaximum
+    )
   },
   signNotZero: function (value: number): number {
     return value < 0 ? -1 : 1

@@ -1,9 +1,5 @@
+import fragment from './fragment'
 
-import fragment from './fragment';
-        
-import vertex from './vertex';
-        
-export{
-fragment,
-vertex,
-};
+import vertex from './vertex'
+
+export { fragment, vertex }

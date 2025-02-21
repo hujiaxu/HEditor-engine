@@ -11,12 +11,21 @@ export default class GeometryAttributes {
   color: GeometryAttribute | undefined
   batchId: GeometryAttribute | undefined
   position3DHigh: GeometryAttribute | undefined
-  position3DLow: GeometryAttribute | undefined
+  position3DLow: GeometryAttribute | undefined;
   // extrudeDirection: GeometryAttribute | undefined
   [key: string]: GeometryAttribute | undefined
 
   constructor(options?: GeometryAttributesOptions) {
-    const { position, normal, st, binormal, tangent, color, bitangent, batchId } = options || {}
+    const {
+      position,
+      normal,
+      st,
+      binormal,
+      tangent,
+      color,
+      bitangent,
+      batchId
+    } = options || {}
 
     this.position = position
     this.normal = normal
