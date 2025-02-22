@@ -1,12 +1,15 @@
-import { GeometryOptions, PrimitiveType } from '../../type';
+import { GeometryIndicesType, GeometryOffsetAttribute, GeometryOptions, PrimitiveType } from '../../type';
 import Matrix4 from './Matrix4';
-import GeometryAttribute from './GeometryAttribute';
+import GeometryAttributes from './GeometryAttributes';
+import BoundingSphere from './BoundingSphere';
 export default class Geometry {
-    attributes: {
-        [key: string]: GeometryAttribute;
-    };
-    indices: Uint16Array;
+    attributes: GeometryAttributes;
+    indices: GeometryIndicesType;
     primitiveType: PrimitiveType;
     modelMatrix: Matrix4;
-    constructor({ attributes, indices, primitiveType, modelMatrix }: GeometryOptions);
+    boundingSphere: BoundingSphere;
+    boundingSphereCV: BoundingSphere | undefined;
+    offsetAttribute: GeometryOffsetAttribute | undefined;
+    static computeNumberOfVertices: (geometry: Geometry) => number;
+    constructor({ attributes, indices, primitiveType, modelMatrix, boundingSphere, boundingSphereCV }: GeometryOptions);
 }

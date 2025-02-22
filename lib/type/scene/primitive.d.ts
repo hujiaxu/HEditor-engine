@@ -1,4 +1,4 @@
-import { Appearance, Cartesian3, GeometryInstance, Matrix4 } from '../../Engine';
+import { Appearance, Cartesian3, FrameState, Geometry, GeometryInstance, Matrix4 } from '../../Engine';
 export declare enum PrimitiveType {
     POINTS,
     LINES,
@@ -33,4 +33,6 @@ export interface PrimitiveOptions {
     compressVertices?: boolean;
     cull?: boolean;
     rtcCenter?: Cartesian3;
+    _createPickOffsets?: boolean;
+    createBoundingVolumeFunction?: (frameState: FrameState, geometry: Geometry) => void;
 }

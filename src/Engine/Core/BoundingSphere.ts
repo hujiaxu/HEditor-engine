@@ -1,6 +1,5 @@
 import Cartesian3 from './Cartesian3'
 import Cartographic from './Cartographic'
-import Check from './Check'
 import defaultValue from './DefaultValue'
 import Defined from './Defined'
 import Ellipsoid from './Ellipsoid'
@@ -9,6 +8,7 @@ import { Intersect } from './IntersectionTests'
 // import HEditorMath from './Math'
 import Matrix4 from './Matrix4'
 import Plane from './Plane'
+import { Check } from '..'
 
 export default class BoundingSphere {
   center: Cartesian3
@@ -27,10 +27,7 @@ export default class BoundingSphere {
     sphere: BoundingSphere,
     result?: BoundingSphere
   ) => BoundingSphere
-  static intersectPlane: (
-    sphere: BoundingSphere,
-    plane: Plane
-  ) => Intersect
+  static intersectPlane: (sphere: BoundingSphere, plane: Plane) => Intersect
   static fromPoints: (
     positions: Cartesian3[],
     result?: BoundingSphere
@@ -140,10 +137,7 @@ BoundingSphere.union = (
   return result
 }
 
-BoundingSphere.intersectPlane = (
-  sphere: BoundingSphere,
-  plane: Plane
-) => {
+BoundingSphere.intersectPlane = (sphere: BoundingSphere, plane: Plane) => {
   // >>includeStart('debug', pragmas.debug);
   Check.typeOf.object('sphere', sphere)
   Check.typeOf.object('plane', plane)

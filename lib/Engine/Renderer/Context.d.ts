@@ -1,7 +1,9 @@
-import { ContextOptions, ContextType } from '../../type';
+import { ContextOptions, ContextType, PickObject } from '../../type';
 import ShaderProgram from './ShaderProgram';
 import Geometry from '../Core/Geometry';
 import UniformState from './UniformState';
+import PickId from '../Core/PickId';
+import Framebuffer from './Framebuffer';
 export default class Context {
     private _canvas;
     private _useGPU;
@@ -14,17 +16,54 @@ export default class Context {
     glCreateVertexArray: () => WebGLVertexArrayObject | null;
     glBindVertexArray: (vertexArray: WebGLVertexArrayObject | null) => void;
     glDeleteVertexArray: (vertexArray: WebGLVertexArrayObject) => void;
+    glVertexAttribDivisor: (index: number, divisor: number) => void;
+    private _pickObjects;
+    private _nextPickColor;
+    private _textureFloat;
+    private _textureHalfFloat;
+    private _s3tc;
+    private _pvrtc;
+    private _astc;
+    private _etc;
+    private _etc1;
+    private _bc7;
+    private _elementIndexUint;
+    private _textureFilterAnisotropic;
+    private _textureFloatLinear;
+    private _textureHalfFloatLinear;
+    private _defaultFramebufferMarker;
+    private _instancedArrays;
+    _vertexAttribDivisors: number[];
+    _previousDrawInstanced: boolean;
+    private _vertexArrayObject;
+    get vertexArrayObject(): boolean;
     get uniformState(): UniformState;
     get depthTexture(): boolean;
+    get isSuppotedwebgl2(): boolean;
+    get floatingPointTexture(): boolean;
+    get halfFloatingPointTexture(): boolean;
+    get s3tc(): boolean;
+    get pvrtc(): boolean;
+    get elementIndexUint(): boolean;
+    get instancedArrays(): boolean;
+    get astc(): boolean;
+    get etc(): boolean;
+    get etc1(): boolean;
+    get bc7(): boolean;
+    get textureFilterAnisotropic(): boolean;
+    get textureFloatLinear(): boolean;
+    get textureHalfFloatLinear(): boolean;
+    get defaultFramebuffer(): Framebuffer | undefined;
+    get drawingBufferWidth(): number;
+    get drawingBufferHeight(): number;
     constructor(options: ContextOptions);
     private _initContext;
     private _initialFunctions;
+    createPickId(object: PickObject): PickId;
     draw({ context, geometry, uniformState }: {
         context: Context;
         geometry: Geometry;
         uniformState?: UniformState;
     }): void;
-    feedUniforms({ shaderProgram }: {
-        shaderProgram: ShaderProgram;
-    }): void;
+    private _feedUniforms;
 }

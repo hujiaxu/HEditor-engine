@@ -4,7 +4,7 @@ import HEditorMath from './Math'
 export default class IndexDatatype {
   static createTypedArray: (
     numberOfVertices: number,
-    indicesLengthOrArray: ArrayLike<number>  | ArrayBuffer | number
+    indicesLengthOrArray: ArrayLike<number> | ArrayBuffer | number
   ) => Uint32Array<ArrayBuffer> | Uint16Array<ArrayBuffer>
   static readonly UNSIGNED_INT = WebGL2RenderingContext.UNSIGNED_INT
   static readonly UNSIGNED_BYTE = WebGL2RenderingContext.UNSIGNED_BYTE
@@ -24,7 +24,10 @@ IndexDatatype.createTypedArray = (
     throw new Error('numberOfVertices is required.')
   }
   // >>includeEnd('debug');
-  const typedArray = typeof indicesLengthOrArray === 'number' ? new ArrayBuffer(indicesLengthOrArray) : indicesLengthOrArray
+  const typedArray =
+    typeof indicesLengthOrArray === 'number'
+      ? new ArrayBuffer(indicesLengthOrArray)
+      : indicesLengthOrArray
 
   if (numberOfVertices >= HEditorMath.SIXTY_FOUR_KILOBYTES) {
     return new Uint32Array(typedArray)

@@ -9,7 +9,7 @@ import {
   ContextType
 } from '../../type'
 import Defined from '../Core/Defined'
-import Check from '../Core/Check'
+import { Check } from '..'
 import IndexDatatype from '../Core/IndexDatatype'
 
 export default class Buffer {
@@ -113,7 +113,7 @@ export default class Buffer {
     this._gl = gl
     this._webgl2 = options.context.isSuppotedwebgl2
     this._bufferTarget = bufferTarget
-    this._sizeInBytes = sizeInBytes
+    this._sizeInBytes = sizeInBytes!
     this._usage = usage
     this._buffer = buffer
     this.vertexArrayDestroyable = true

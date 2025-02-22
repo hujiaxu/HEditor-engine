@@ -1,14 +1,28 @@
-import { VertexArrayOptions, ContextType } from '../../type';
+import { VertexArrayOptions, ContextType, VertexArrayFromGeometryOptions, VAAttributes } from '../../type';
 import Context from './Context';
 import Buffer from './Buffer';
-import Geometry from '../Core/Geometry';
 export default class VertexArray {
-    context: Context;
-    geometry: Geometry;
-    indexBuffer: Buffer | undefined;
-    _vao: WebGLVertexArrayObject | null;
+    private _vao;
+    private _numberOfVertices;
+    private _hasInstancedAttributes;
+    private _hasConstantAttributes;
+    private _context;
+    private _gl;
+    private _attributes;
+    private _indexBuffer;
     get vao(): WebGLVertexArrayObject | null;
-    constructor({ context, geometry }: VertexArrayOptions);
+    get numberOfVertexAttributes(): number;
+    get numberOfVertices(): number;
+    get hasInstancedAttributes(): boolean;
+    get hasConstantAttributes(): boolean;
+    get attributes(): VAAttributes[];
+    get indexBuffer(): Buffer | undefined;
+    get context(): Context;
+    get gl(): ContextType;
+    static fromGeometry: (options: VertexArrayFromGeometryOptions) => VertexArray;
+    constructor(options: VertexArrayOptions);
+    private _bind;
+    private _addAttribute;
     getVertexAttributes({ gl, shaderProgram, numberOfVertexAttributes }: {
         gl: ContextType | undefined;
         shaderProgram: WebGLProgram | undefined;

@@ -123,7 +123,7 @@ export default class Scene {
         position: new GeometryAttribute({
           componentsPerAttribute: 3,
           componentDatatype: ComponentDatatype.FLOAT,
-          values: [
+          values: new Float32Array([
             // Front face
             // v1
             -0.5, -0.5, 0.5,
@@ -182,10 +182,10 @@ export default class Scene {
             0.5, -0.5, 0.5,
             // v23
             -0.5, -0.5, 0.5
-          ]
+          ])
         }),
         color: new GeometryAttribute({
-          values: [
+          values: new Float32Array([
             1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0,
             1.0, 0.0, 1.0,
 
@@ -203,7 +203,7 @@ export default class Scene {
 
             1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0,
             1.0, 0.0, 1.0
-          ],
+          ]),
           componentsPerAttribute: 4,
           componentDatatype: ComponentDatatype.FLOAT
         })

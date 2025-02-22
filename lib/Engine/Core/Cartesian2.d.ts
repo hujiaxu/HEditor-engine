@@ -12,5 +12,8 @@ export default class Cartesian2 {
     static distance: (left: Cartesian2, right: Cartesian2) => number;
     static multiplyByScalar: (cartesian: Cartesian2, scalar: number, result?: Cartesian2) => Cartesian2;
     static fromCartesian3: (cartesian: Cartesian3, result?: Cartesian2) => Cartesian2;
+    static unpack: (array: number[], index: number, result?: Cartesian2) => Cartesian2;
+    static fromCartesian4: (cartesian: Cartesian2, result?: Cartesian2) => Cartesian2;
+    static fromArray: (array: ArrayLike<number>, startIndex: number, result?: Cartesian2) => Cartesian2;
     constructor(x?: number, y?: number);
 }

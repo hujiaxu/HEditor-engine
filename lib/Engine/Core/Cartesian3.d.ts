@@ -27,7 +27,12 @@ export default class Cartesian3 {
     static divideByScalar: (cartesian: Cartesian3, scalar: number, result?: Cartesian3) => Cartesian3;
     static negate: (cartesian: Cartesian3, result?: Cartesian3) => Cartesian3;
     static fromElements: (x: number, y: number, z: number, result?: Cartesian3) => Cartesian3;
-    static unpack: (array: number[], index: number, result?: Cartesian3) => Cartesian3;
+    static unpack: (array: ArrayLike<number>, index: number, result?: Cartesian3) => Cartesian3;
     static projectVector: (cartesian: Cartesian3, direction: Cartesian3, result?: Cartesian3) => Cartesian3;
+    static fromCartesian4: (cartesian: Cartesian3, result?: Cartesian3) => Cartesian3;
+    static pack: (cartesian: Cartesian3, array: number[], index: number) => number[];
+    static maximumComponent: (cartesian: Cartesian3) => number;
+    static fromArray: (array: ArrayLike<number>, startIndex: number, result?: Cartesian3) => Cartesian3;
+    static midpoint: (left: Cartesian3, right: Cartesian3, result?: Cartesian3) => Cartesian3;
     constructor(x?: number, y?: number, z?: number);
 }

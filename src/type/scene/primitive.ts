@@ -1,4 +1,11 @@
-import { Appearance, Cartesian3, FrameState, Geometry, GeometryInstance, Matrix4 } from '../../Engine'
+import {
+  Appearance,
+  Cartesian3,
+  FrameState,
+  Geometry,
+  GeometryInstance,
+  Matrix4
+} from '../../Engine'
 
 export enum PrimitiveType {
   POINTS = WebGLRenderingContext.POINTS,
@@ -37,5 +44,8 @@ export interface PrimitiveOptions {
   cull?: boolean
   rtcCenter?: Cartesian3
   _createPickOffsets?: boolean
-  createBoundingVolumeFunction?: (frameState: FrameState, geometry: Geometry) => void
+  createBoundingVolumeFunction?: (
+    frameState: FrameState,
+    geometry: Geometry
+  ) => void
 }

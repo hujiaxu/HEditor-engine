@@ -15,12 +15,17 @@
     "outDir": "lib",
     "baseUrl": "./",
     "strict": true,
+    "noEmit": false,
     "forceConsistentCasingInFileNames": true,
     "typeRoots": ["./node_modules/@webgpu/types", "./node_modules/@types"],
   },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+  ],
   "exclude": [
     "lib",
-    "node_modules"
+    "node_modules",
   ],
   "rules": {
   }

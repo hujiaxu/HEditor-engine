@@ -35,6 +35,9 @@ export default class BatchTable {
   get attributes() {
     return this._attributes
   }
+  get textureStep() {
+    return this._textureStep
+  }
 
   constructor(
     context: Context,

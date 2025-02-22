@@ -16,7 +16,7 @@ import Cartesian4 from './Core/Cartesian4'
 
 import Cartographic from './Core/Cartographic'
 
-import Check from './Core/Check.d'
+import Check from './Core/Check'
 
 import Color from './Core/Color'
 
@@ -25,6 +25,8 @@ import CubicRealPolynomial from './Core/CubicRealPolynomial'
 import DefaultValue from './Core/DefaultValue'
 
 import Defined from './Core/Defined'
+
+import DeveloperError from './Core/DeveloperError'
 
 import Ellipsoid from './Core/Ellipsoid'
 
@@ -169,6 +171,7 @@ export {
   CubicRealPolynomial,
   DefaultValue,
   Defined,
+  DeveloperError,
   Ellipsoid,
   EllipsoidGeodesic,
   EllipsoidTerrainProvider,

@@ -9,6 +9,7 @@ const INDEX_FILE_NAME = 'index.ts';   // 要生成的索引文件名称
 const IGNORE_FILES = [INDEX_FILE_NAME, 'index', path.basename(__filename)]; // 忽略index文件自身和本脚本文件
 
 const EXPORT_ALL_DIRECTORY = ['type', 'utils']
+const EXPORT_TYPE_FILE = []
 
 const getFilesAndDirectories = (directoryPath = BASE_DIRECTORY_TO_WATCH) => {
   // 同步方式读取当前目录所有条目
@@ -60,8 +61,8 @@ function updateIndexFile() {
     const relativePathWithoutExtensions = []
     for (const filePath of filesPath) {
       const relativePath = path.relative(DIRECTORY_TO_WATCH, filePath);
-      const relativePathWithoutExtension = relativePath.replace(path.extname(relativePath), '');
-      const fileName = path.basename(relativePathWithoutExtension);
+      const relativePathWithoutExtension = relativePath.replace(path.extname(relativePath), '').split('.')[0];
+      const fileName = path.basename(relativePathWithoutExtension).split('.')[0];
       if (IGNORE_FILES.includes(fileName) || relativePathWithoutExtensions.includes(relativePathWithoutExtension)) {
         continue
       }
@@ -73,7 +74,7 @@ function updateIndexFile() {
 
       } else {
         importContent += `
-import ${fileName} from './${relativePathWithoutExtension}';
+import ${fileName} from './${relativePathWithoutExtension}${EXPORT_TYPE_FILE.includes(fileName) ? '.d.ts' : ''}';
         `
 
         exportObject += fileName + ',\n'

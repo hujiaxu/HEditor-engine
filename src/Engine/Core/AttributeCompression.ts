@@ -86,9 +86,7 @@ AttributeCompression.octEncode = (
  * @param {Cartesian2} result The object to store the encoded 2D value. If none is provided, a new Cartesian2 is created.
  * @returns {number} The encoded float value.
  */
-AttributeCompression.octEncodeFloat = (
-  vector: Cartesian3
-) => {
+AttributeCompression.octEncodeFloat = (vector: Cartesian3) => {
   const scratchEncodeCart2 = AttributeCompression.octEncode(vector)
 
   return AttributeCompression.octPackFloat(scratchEncodeCart2)

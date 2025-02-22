@@ -4,6 +4,11 @@ import Interval from './Interval';
 import Matrix3 from './Matrix3';
 import Plane from './Plane';
 import Ray from './Ray';
+export declare enum Intersect {
+    OUTSIDE = -1,
+    INTERSECTING = 0,
+    INSIDE = 1
+}
 export default class IntersectionTests {
     static rayPlane: (ray: Ray, plane: Plane, result?: Cartesian3) => Cartesian3 | undefined;
     static rayEllipsoid: (ray: Ray, ellipsoid: Ellipsoid) => Interval | undefined;

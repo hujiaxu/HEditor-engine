@@ -1,6 +1,33 @@
-import GeometryAttribute from '../Core/GeometryAttribute';
+import { BatchTableAttribute } from '../../type';
+import Cartesian2 from '../Core/Cartesian2';
+import Cartesian3 from '../Core/Cartesian3';
+import Cartesian4 from '../Core/Cartesian4';
+import Context from '../Renderer/Context';
+import FrameState from './FrameState';
 export default class BatchTable {
-    _numberOfInstances: number;
-    _attributes: GeometryAttribute[];
-    constructor(attributes: GeometryAttribute[], numberOfInstances: number);
+    private _numberOfInstances;
+    private _attributes;
+    private _batchValuesDirty;
+    private _batchValues;
+    private _texture;
+    private _offsets;
+    private _stride;
+    private _packFloats;
+    private _pixelDatatype;
+    private _textureStep;
+    private _textureDimensions;
+    get attributes(): BatchTableAttribute[];
+    get textureStep(): Cartesian4;
+    constructor(context: Context, attributes: BatchTableAttribute[], numberOfInstances: number);
+    private _getStride;
+    private _createOffsets;
+    private _getDataType;
+    private _createTexture;
+    private _updateTexture;
+    update(frameState: FrameState): void;
+    setBatchedAttribute(instanceIndex: number, attributeIndex: number, value: number | Cartesian2 | Cartesian3 | Cartesian4): void;
+    getBatchedAttribute(instanceIndex: number, attributeIndex: number, result?: Cartesian4): number | Cartesian3 | Cartesian2 | Cartesian4;
+    private _setPackedAttribute;
+    private _getPackedFloat;
+    private _getAttributeType;
 }

@@ -45,7 +45,6 @@ Geometry.computeNumberOfVertices = (geometry: Geometry) => {
 
   for (const property in geometry.attributes) {
     if (
-      geometry.attributes.hasOwnProperty(property) &&
       Defined(geometry.attributes) &&
       Defined(geometry.attributes[property as GeometryAttributeType]) &&
       Defined(geometry.attributes[property as GeometryAttributeType]!.values)

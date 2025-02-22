@@ -1,4 +1,5 @@
 import {
+  BatchTableAttribute,
   BufferUsage,
   ComponentDatatype,
   GeometryAttributeType,
@@ -71,7 +72,9 @@ export default class Primitive {
   private _vertexCacheOptimize: boolean
   private _pickOffsets: PickOffsets[] | undefined
   private _modelMatrix!: Matrix4
-  private _createBoundingVolumeFunction: undefined | ((frameState: FrameState, geometry: Geometry) => void)
+  private _createBoundingVolumeFunction:
+    | undefined
+    | ((frameState: FrameState, geometry: Geometry) => void)
 
   public get pickOffsets() {
     return this._pickOffsets
@@ -308,9 +311,9 @@ export default class Primitive {
       newBS = boundingSpheres[i].clone(newBS)
       this._transformBoundingSphere(newBS, offset, offsetInstanceExtend[i])
     }
-    const combinedBS = []
-    const combinedWestBS = []
-    const combinedEastBS = []
+    const combinedBS: BoundingSphere[] = []
+    const combinedWestBS: BoundingSphere[] = []
+    const combinedEastBS: BoundingSphere[] = []
 
     for (i = 0; i < length; ++i) {
       const bs = newBoundingSpheres[i]
@@ -341,7 +344,7 @@ export default class Primitive {
     for (i = 1; i < combinedWestBS.length; i++) {
       resultBS3 = BoundingSphere.union(resultBS3, combinedWestBS[i])
     }
-    const result = []
+    const result: BoundingSphere[] = []
     if (Defined(resultBS1)) {
       result.push(resultBS1)
     }
@@ -621,7 +624,9 @@ export default class Primitive {
     primitive._batchTableBoundingSpheresUpdated = true
   }
 
-  private _loadAsynchronous(frameState: FrameState) {}
+  private _loadAsynchronous(frameState: FrameState) {
+    console.log('frameState: ', frameState)
+  }
   private _loadSynchronous(frameState: FrameState) {
     const instances = Array.isArray(this.geometryInstances)
       ? this.geometryInstances
@@ -716,10 +721,7 @@ export default class Primitive {
     const newAttributes = new GeometryAttributes()
 
     for (const property in attributes) {
-      if (
-        attributes.hasOwnProperty(property) &&
-        Defined(attributes[property as GeometryAttributeType])
-      ) {
+      if (Defined(attributes[property as GeometryAttributeType])) {
         newAttributes[property as GeometryAttributeType] = this._cloneAttribute(
           attributes[property as GeometryAttributeType]!
         )
@@ -746,9 +748,9 @@ export default class Primitive {
   }
 
   private _cloneAttribute(attribute: GeometryAttribute) {
-    let clonedValues
+    // let clonedValues
     // if (Array.isArray(attribute.values)) {
-    clonedValues = attribute.values.slice(0)
+    const clonedValues = attribute.values.slice(0)
     // } else {
     //   clonedValues = [attribute.values];
     // }
@@ -770,10 +772,12 @@ export default class Primitive {
       return
     }
 
-    const names = this._getCommonPerInstanceAttributeNames(instances)
+    const names = this._getCommonPerInstanceAttributeNames(
+      instances
+    ) as string[]
     const length = names.length
 
-    const attributes = []
+    const attributes: BatchTableAttribute[] = []
     const attributeIndices: AttributeIndices = {}
     const boundingSphereAttributeIndices: BoundingSphereAttributeIndices = {
       center3DHigh: 0,
@@ -912,12 +916,12 @@ export default class Primitive {
   private _getCommonPerInstanceAttributeNames(instances: GeometryInstance[]) {
     const length = instances.length
 
-    const attributesInAllInstances = []
+    const attributesInAllInstances: string[] = []
     const attribtues0 = instances[0].attributes!
     let name
 
     for (name in attribtues0) {
-      if (attribtues0.hasOwnProperty(name) && Defined(attribtues0[name])) {
+      if (Defined(attribtues0[name])) {
         const attribute = attribtues0[name]
         let inAllInstances = true
 

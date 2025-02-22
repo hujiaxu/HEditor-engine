@@ -1,4 +1,5 @@
-import { ContextType } from './context';
+import { Context } from '../../Engine';
+import { GeometryAttributeValuesType } from '../core/geometryAttributes';
 export declare enum BufferTargetType {
     ARRAY_BUFFER,
     ELEMENT_ARRAY_BUFFER,
@@ -27,8 +28,29 @@ export declare enum IndexDataType {
     UNSIGNED_INT
 }
 export interface BufferOptions {
-    gl: ContextType;
-    data: Float32Array | Uint16Array;
     bufferTarget: BufferTargetType;
-    bufferUsage: BufferUsageType;
+    bufferUsage?: BufferUsageType;
+    context: Context;
+    typedArray?: ArrayBuffer | GeometryAttributeValuesType;
+    usage: BufferUsageType;
+    sizeInBytes?: number;
+}
+export declare const BufferUsage: {
+    STREAM_DRAW: BufferUsageType;
+    STATIC_DRAW: BufferUsageType;
+    DYNAMIC_DRAW: BufferUsageType;
+    validate: (bufferUsage: BufferUsageType) => boolean;
+};
+export interface BufferCreateVertexBufferOptions {
+    context: Context;
+    typedArray: ArrayBuffer | GeometryAttributeValuesType;
+    sizeInBytes?: number;
+    usage: number;
+}
+export interface BufferCreateIndexBufferOptions {
+    context: Context;
+    typedArray: ArrayBuffer | GeometryAttributeValuesType;
+    usage: number;
+    indexDatatype: number;
+    sizeInBytes?: number;
 }

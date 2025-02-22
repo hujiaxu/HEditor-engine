@@ -16,7 +16,7 @@ import GeometryAttributes from '../Core/GeometryAttributes'
 import GeometryAttribute from '../Core/GeometryAttribute'
 import HEditorMath from '../Core/Math'
 import IndexDatatype from '../Core/IndexDatatype'
-import Check from '../Core/Check'
+import { Check } from '..'
 import DeveloperError from '../Core/DeveloperError'
 
 export default class VertexArray {
@@ -132,7 +132,7 @@ export default class VertexArray {
     this._context = options.context
     const context = options.context
     const gl = context.gl
-    const attributes = options.attributes
+    const attributes = options.attributes!
     const indexBuffer = options.indexBuffer
 
     let i
@@ -433,10 +433,7 @@ const interleaveAttributes = (attributes: GeometryAttributes) => {
 
   for (name in attributes) {
     // Attribute needs to have per-vertex values; not a constant value for all vertices.
-    if (
-      Defined(attributes[name]) &&
-      Defined(attributes[name]!.values)
-    ) {
+    if (Defined(attributes[name]) && Defined(attributes[name]!.values)) {
       names.push(name)
 
       if (attributes[name]?.componentDatatype === ComponentDatatype.DOUBLE) {

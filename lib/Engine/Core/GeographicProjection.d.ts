@@ -6,6 +6,7 @@ export default class GeographicProjection {
     private _semimajorAxis;
     private _oneOverSemimajorAxis;
     get ellipsoid(): Ellipsoid;
+    set ellipsoid(ellipsoid: Ellipsoid);
     constructor(ellipsoid?: Ellipsoid);
     project(cartographic: Cartographic, result?: Cartesian3): Cartesian3;
     unproject(cartesian: Cartesian3, result?: Cartographic): Cartographic;

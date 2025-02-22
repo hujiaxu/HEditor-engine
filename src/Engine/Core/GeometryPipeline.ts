@@ -191,7 +191,6 @@ GeometryPipeline.reorderForPreVertexCache = (geometry: Geometry) => {
     const attributes = geometry.attributes
     for (const property in attributes) {
       if (
-        attributes.hasOwnProperty(property) &&
         Defined(attributes[property as GeometryAttributeType]) &&
         Defined(attributes[property as GeometryAttributeType]!.values)
       ) {
@@ -245,10 +244,7 @@ const findAttributesInAllGeometries = (
   let name: GeometryAttributeType | string
 
   for (name in attributes0) {
-    if (
-      Defined(attributes0[name]) &&
-      Defined(attributes0[name]?.values)
-    ) {
+    if (Defined(attributes0[name]) && Defined(attributes0[name]?.values)) {
       const attribute = attributes0[name]!
       let numberOfComponents = attribute.values.length
       let inAllGeometries = true
@@ -330,19 +326,19 @@ const combineGeometries = (
   // Combine attributes from each geometry into a single typed array
   for (name in attributes) {
     // if (attributes.hasOwnProperty(name)) {
-      const attributeName = name as GeometryAttributeType
-      values = attributes[attributeName]!.values
+    const attributeName = name as GeometryAttributeType
+    values = attributes[attributeName]!.values
 
-      k = 0
-      for (i = 0; i < length; ++i) {
-        sourceValues =
-          instances[i][propertyName].attributes[attributeName]!.values
-        sourceValuesLength = sourceValues.length
+    k = 0
+    for (i = 0; i < length; ++i) {
+      sourceValues =
+        instances[i][propertyName].attributes[attributeName]!.values
+      sourceValuesLength = sourceValues.length
 
-        for (j = 0; j < sourceValuesLength; ++j) {
-          values[k++] = sourceValues[j]
-        }
+      for (j = 0; j < sourceValuesLength; ++j) {
+        values[k++] = sourceValues[j]
       }
+    }
     // }
   }
 
@@ -885,7 +881,10 @@ GeometryPipeline.fitToUnsignedShortIndices = (geometry: Geometry) => {
       geometries.push(
         new Geometry({
           attributes: newAttributes,
-          indices: IndexDatatype.createTypedArray(newIndices.length, newIndices),
+          indices: IndexDatatype.createTypedArray(
+            newIndices.length,
+            newIndices
+          ),
           primitiveType: geometry.primitiveType,
           boundingSphere: geometry.boundingSphere,
           boundingSphereCV: geometry.boundingSphereCV

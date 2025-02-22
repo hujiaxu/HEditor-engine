@@ -10,6 +10,7 @@ import Cartesian4 from '../Core/Cartesian4';
 import Ellipsoid from '../Core/Ellipsoid';
 import { CameraViewOptions, SceneMode } from '../../type';
 import Rectangle from '../Core/Rectangle';
+import BoundingSphere from '../Core/BoundingSphere';
 export default class Camera {
     position: Cartesian3;
     direction: Cartesian3;
@@ -53,6 +54,8 @@ export default class Camera {
     frustum: PerspectiveFrustum | OrthographicFrustum;
     constructor(scene: Scene);
     update(mode: SceneMode): void;
+    getPixelSize(boundingSphere: BoundingSphere, drawingBufferWidth: number, drawingBufferHeight: number): number;
+    distanceToBoundingSphere(boundingSphere: BoundingSphere): number;
     private _updateMembers;
     private _calculateOrthographicFrustumWidth;
     _adjustOrthographicFrustum(zooming: boolean): void;

@@ -2,6 +2,9 @@ declare const HEditorMath: {
     PI: number;
     TWO_PI: number;
     PI_OVER_TWO: number;
+    SIXTY_FOUR_KILOBYTES: number;
+    toSNorm: (value: number, rangeMaximum: number) => number;
+    signNotZero: (value: number) => number;
     zeroToTwoPi: (angle: number) => number;
     mod: (m: number, n: number) => number;
     cos: (radians: number) => number;
@@ -25,6 +28,12 @@ declare const HEditorMath: {
     EPSILON13: number;
     EPSILON14: number;
     EPSILON15: number;
+    EPSILON16: number;
+    EPSILON17: number;
+    EPSILON18: number;
+    EPSILON19: number;
+    EPSILON20: number;
+    EPSILON21: number;
     LUNAR_RADIUS: number;
     equalsEpsilon: (left: number, right: number, relativeEpsilon?: number, absoluteEpsilon?: number) => boolean;
     sign: (value: number) => number;

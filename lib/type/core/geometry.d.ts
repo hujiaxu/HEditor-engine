@@ -1,11 +1,16 @@
-import Matrix4 from '../../Engine/Core/Matrix4';
-import GeometryAttribute from '../../Engine/Core/GeometryAttribute';
 import { PrimitiveType } from '../scene/primitive';
+import { BoundingSphere, Matrix4, GeometryAttributes } from '../../Engine';
+import { GeometryIndicesType } from './geometryAttributes';
 export interface GeometryOptions {
-    attributes: {
-        [key: string]: GeometryAttribute;
-    };
-    indices: Uint16Array;
+    attributes: GeometryAttributes;
+    indices?: GeometryIndicesType;
     primitiveType: PrimitiveType;
     modelMatrix?: Matrix4;
+    boundingSphere?: BoundingSphere;
+    boundingSphereCV?: BoundingSphere;
+}
+export declare enum GeometryType {
+    GEOMETRY = "geometry",
+    EAST_HEMISPHERE_GEOMETRY = "eastHemisphereGeometry",
+    WEST_HEMISPHERE_GEOMETRY = "westHemisphereGeometry"
 }
