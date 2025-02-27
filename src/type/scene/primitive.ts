@@ -28,8 +28,7 @@ export enum PrimitiveState {
 }
 
 export interface PrimitiveOptions {
-  GeometryInstances: GeometryInstance[] | GeometryInstance
-  primitiveType: PrimitiveType
+  geometryInstances: GeometryInstance[] | GeometryInstance
   appearance: Appearance
   depthFailAppearance?: Appearance
   show?: boolean

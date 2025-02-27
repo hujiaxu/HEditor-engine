@@ -5,5 +5,5 @@ const defaultValue = <T>(a: T | undefined, b: T) => {
   return b
 }
 
-defaultValue.EMPTY_OBJECT = Object.freeze({})
+defaultValue.EMPTY_OBJECT = Object.create({})
 export default defaultValue

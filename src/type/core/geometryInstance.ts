@@ -5,8 +5,8 @@ export interface GeometryInstanceOptions {
   geometry: Geometry
   eastHemisphereGeometry?: Geometry
   westHemisphereGeometry?: Geometry
-  id: string
-  pickPrimitive: Primitive
+  id?: string
+  pickPrimitive?: Primitive
   attributes?: {
     [key: string]: GeometryAttribute
   }

@@ -18,8 +18,7 @@ export declare enum PrimitiveState {
     FAILED = 6
 }
 export interface PrimitiveOptions {
-    GeometryInstances: GeometryInstance[] | GeometryInstance;
-    primitiveType: PrimitiveType;
+    geometryInstances: GeometryInstance[] | GeometryInstance;
     appearance: Appearance;
     depthFailAppearance?: Appearance;
     show?: boolean;

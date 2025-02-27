@@ -10,6 +10,7 @@ const IGNORE_FILES = [INDEX_FILE_NAME, 'index', path.basename(__filename)]; // �
 
 const EXPORT_ALL_DIRECTORY = ['type', 'utils']
 const EXPORT_TYPE_FILE = []
+const EXPORT_FOR_LIB_DIRECTORY = ['Engine', 'type']
 
 const getFilesAndDirectories = (directoryPath = BASE_DIRECTORY_TO_WATCH) => {
   // 同步方式读取当前目录所有条目
@@ -50,6 +51,8 @@ function updateIndexFile() {
 
   const { directories } = getFilesAndDirectories();
 
+  const exportContentForLib = []
+
   for (const directory of directories) {
     const DIRECTORY_TO_WATCH = BASE_DIRECTORY_TO_WATCH + '/' + directory;
     const filesPath = recursionFiles(DIRECTORY_TO_WATCH)
@@ -71,12 +74,18 @@ function updateIndexFile() {
 
       if (EXPORT_ALL_DIRECTORY.includes(directory)) {
         outputContent += `export * from './${relativePathWithoutExtension}';\n`
-
+        if (EXPORT_FOR_LIB_DIRECTORY.includes(directory)) {
+          exportContentForLib.push(`export * from './${directory}/${relativePathWithoutExtension}';\n`)
+        }
       } else {
         importContent += `
 import ${fileName} from './${relativePathWithoutExtension}${EXPORT_TYPE_FILE.includes(fileName) ? '.d.ts' : ''}';
         `
-
+        if (EXPORT_FOR_LIB_DIRECTORY.includes(directory)) {
+          exportContentForLib.push(`
+import ${fileName} from './${directory}/${relativePathWithoutExtension}${EXPORT_TYPE_FILE.includes(fileName) ? '.d.ts' : ''}';
+        `)
+        }
         exportObject += fileName + ',\n'
       }
     }
@@ -84,11 +93,18 @@ import ${fileName} from './${relativePathWithoutExtension}${EXPORT_TYPE_FILE.inc
   
     if (EXPORT_ALL_DIRECTORY.includes(directory)) {
       fs.writeFileSync(path.join(DIRECTORY_TO_WATCH, INDEX_FILE_NAME), outputContent, 'utf8');
+      
     } else {
       fs.writeFileSync(path.join(DIRECTORY_TO_WATCH, 'index.ts'), importContent + '\n' + exportObject + '};', 'utf8');
+      if (EXPORT_FOR_LIB_DIRECTORY.includes(directory)) {
+        exportContentForLib.push(exportObject + '};')
+      }
     }
+
     // console.log(`Index file updated with ${files.length} file(s).`);
   }
+
+  fs.writeFileSync(path.join(BASE_DIRECTORY_TO_WATCH, 'index.ts'), exportContentForLib.join('\n'), 'utf8');
 }
 
 // 初次运行时先更新一次

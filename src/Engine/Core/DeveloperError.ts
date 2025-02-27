@@ -38,7 +38,7 @@ export default class DeveloperError {
 }
 
 if (Defined(Object.create)) {
-  DeveloperError.prototype = Object.create(Error.prototype)
+  // DeveloperError.prototype = Object.create(Error.prototype)
   DeveloperError.prototype.constructor = DeveloperError
 }
 

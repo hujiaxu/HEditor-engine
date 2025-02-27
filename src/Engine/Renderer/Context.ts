@@ -9,7 +9,7 @@ import {
 import ShaderProgram from './ShaderProgram'
 import VertexShaderSource from '../../Shaders/vertex'
 import FragmentShaderSource from '../../Shaders/fragment'
-import VertexArray from './VertexArray'
+// import VertexArray from './VertexArray'
 import Geometry from '../Core/Geometry'
 import UniformState from './UniformState'
 import Defined from '../Core/Defined'
@@ -17,6 +17,7 @@ import Color from '../Core/Color'
 import PickId from '../Core/PickId'
 import ContextLimits from './ContextLimits'
 import Framebuffer from './Framebuffer'
+import Texture from './Texture'
 
 export default class Context {
   private _canvas: HTMLCanvasElement
@@ -55,6 +56,7 @@ export default class Context {
   _vertexAttribDivisors: number[]
   _previousDrawInstanced: boolean
   private _vertexArrayObject: boolean = false
+  private _defaultTexture: Texture | undefined
 
   get vertexArrayObject() {
     return this._vertexArrayObject || this.isSuppotedwebgl2
@@ -115,6 +117,22 @@ export default class Context {
   }
   get drawingBufferHeight() {
     return this.gl.drawingBufferHeight
+  }
+
+  get defaultTexture() {
+    if (this._defaultTexture === undefined) {
+      this._defaultTexture = new Texture({
+        context: this,
+        source: {
+          width: 1,
+          height: 1,
+          arrayBufferView: new Uint8Array([255, 255, 255, 255])
+        },
+        flipY: false
+      })
+    }
+
+    return this._defaultTexture
   }
 
   constructor(options: ContextOptions) {
@@ -301,12 +319,12 @@ export default class Context {
       context._uniformState.update(uniformState)
     }
 
-    const va = new VertexArray({
-      context,
-      geometry
-    })
+    // const va = VertexArray.fromGeometry({
+    //   gl: context.gl,
+    //   geometry
+    // })
 
-    context.glBindVertexArray!(va.vao)
+    // context.glBindVertexArray!(va.vao)
 
     context.gl.viewport(
       0,

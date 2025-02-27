@@ -12,6 +12,6 @@ export default class GeometryInstance {
     attributes: {
         [key: string]: GeometryAttribute;
     } | undefined;
-    pickPrimitive: Primitive;
+    pickPrimitive: Primitive | undefined;
     constructor(options: GeometryInstanceOptions);
 }

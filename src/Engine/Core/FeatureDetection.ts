@@ -203,6 +203,13 @@ const internetExplorerVersion = () => {
   return isInternetExplorer() && internetExplorerVersionResult
 }
 
+const supportsEsmWebWorkers = () => {
+  return !isFirefox() || parseInt(firefoxVersionResult.toString()) >= 114
+}
+const supportsWebAssembly = () => {
+  return typeof WebAssembly !== 'undefined'
+}
+
 const FeatureDetection = {
   isChrome: isChrome,
   chromeVersion: chromeVersion,
@@ -218,7 +225,9 @@ const FeatureDetection = {
   isIPadOrIOS: isIPadOrIOS,
   supportsPointerEvents: supportsPointerEvents,
   internetExplorerVersion: internetExplorerVersion,
-  isInternetExplorer: isInternetExplorer
+  isInternetExplorer: isInternetExplorer,
+  supportsEsmWebWorkers: supportsEsmWebWorkers,
+  supportsWebAssembly: supportsWebAssembly
 }
 
 export default FeatureDetection

@@ -48,7 +48,7 @@ interface AttributeIndices {
 
 export default class Primitive {
   public geometryInstances: GeometryInstance[] | GeometryInstance | undefined
-  public readonly primitiveType: PrimitiveType
+  public readonly primitiveType!: PrimitiveType
   private _asynchronous: boolean
   public show: boolean
   public modelMatrix: Matrix4
@@ -137,8 +137,7 @@ export default class Primitive {
     | undefined
 
   constructor(options: PrimitiveOptions) {
-    this.geometryInstances = options.GeometryInstances
-    this.primitiveType = options.primitiveType
+    this.geometryInstances = options.geometryInstances
 
     this.appearance = options.appearance
     this._appearance = undefined
