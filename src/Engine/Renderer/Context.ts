@@ -18,6 +18,7 @@ import PickId from '../Core/PickId'
 import ContextLimits from './ContextLimits'
 import Framebuffer from './Framebuffer'
 import Texture from './Texture'
+import { DefaultValue } from '..'
 
 export default class Context {
   private _canvas: HTMLCanvasElement
@@ -57,6 +58,7 @@ export default class Context {
   _previousDrawInstanced: boolean
   private _vertexArrayObject: boolean = false
   private _defaultTexture: Texture | undefined
+  private _allowTextureFilterAnisotropic: boolean
 
   get vertexArrayObject() {
     return this._vertexArrayObject || this.isSuppotedwebgl2
@@ -134,10 +136,17 @@ export default class Context {
 
     return this._defaultTexture
   }
+  get allowTextureFilterAnisotropic() {
+    return this._allowTextureFilterAnisotropic
+  }
 
   constructor(options: ContextOptions) {
     this._canvas = options.canvas
     this._useGPU = options.isUseGPU
+    this._allowTextureFilterAnisotropic = DefaultValue(
+      options.allowTextureFilterAnisotropic,
+      true
+    )
 
     const gl = this._initContext()
     this._initialFunctions()
@@ -159,6 +168,9 @@ export default class Context {
     ContextLimits._maximumVertexAttributes = gl.getParameter(
       gl.MAX_VERTEX_ATTRIBS
     ) // min: 8
+    ContextLimits._maximumCubeMapSize = gl.getParameter(
+      gl.MAX_CUBE_MAP_TEXTURE_SIZE
+    ) // min: 16
 
     // Vertex attribute divisor state cache. Workaround for ANGLE (also look at VertexArray.setVertexAttribDivisor)
     this._vertexAttribDivisors = []
@@ -239,6 +251,15 @@ export default class Context {
     ])
     this._elementIndexUint = !!getExtension(this.gl, ['OES_element_index_uint'])
     this._instancedArrays = !!getExtension(this.gl, ['ANGLE_instanced_arrays'])
+
+    const textureFilterAnisotropic = this.allowTextureFilterAnisotropic
+      ? getExtension(this.gl, [
+          'EXT_texture_filter_anisotropic',
+          'WEBKIT_EXT_texture_filter_anisotropic'
+        ])
+      : undefined
+    this._textureFilterAnisotropic = textureFilterAnisotropic
+
     if (this.gl instanceof WebGL2RenderingContext) {
       const gl = this.gl as WebGL2RenderingContext
       this.glCreateVertexArray = gl.createVertexArray.bind(gl)

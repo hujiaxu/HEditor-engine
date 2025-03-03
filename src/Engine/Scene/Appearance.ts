@@ -1,6 +1,8 @@
 import { AppearanceOptions } from '../../type'
+import clone from '../Core/Clone'
 import defaultValue from '../Core/DefaultValue'
 import Defined from '../Core/Defined'
+import BlendingState from './BlendingState'
 import Material from './Material'
 
 export default class Appearance {
@@ -43,10 +45,29 @@ export default class Appearance {
     this._closed = defaultValue(options.closed, false)
   }
 
-  isTranslucent() {
+  public isTranslucent() {
     return (
       (Defined(this.material) && this.material.isTranslucent()) ||
       (!Defined(this.material) && this.translucent)
     )
+  }
+
+  /**
+   * Creates a render state.  This is not the final render state instance; instead,
+   * it can contain a subset of render state properties identical to the render state
+   * created in the context.
+   *
+   * @returns {object} The render state.
+   */
+  public getRenderState() {
+    const translucent = this.isTranslucent()
+    const rs = clone(this.renderState!, false)
+    if (translucent) {
+      rs.depthMask = false
+      rs.blending = BlendingState.ALPHA_BLEND
+    } else {
+      rs.depthMask = true
+    }
+    return rs
   }
 }

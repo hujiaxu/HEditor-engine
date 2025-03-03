@@ -1,5 +1,10 @@
 import { createGuid } from '../../utils'
-import { MaterialOptions } from '../../type'
+import {
+  Fabric,
+  MaterialOptions,
+  SourceType,
+  TranslucentType
+} from '../../type'
 import clone from '../Core/Clone'
 import defaultValue from '../Core/DefaultValue'
 import Defined from '../Core/Defined'
@@ -12,21 +17,10 @@ import Resource from '../Core/Resource'
 import DeveloperError from '../Core/DeveloperError'
 import Sampler from '../Renderer/Sampler'
 import loadKTX2 from '../Core/LoadKTX2'
+import CubeMap from '../Renderer/CubeMap'
+import Color from '../Core/Color'
 
 const ktx2Regex = /\.ktx2$/i
-interface Template {
-  source: any
-  type?: string
-  uniforms?: {
-    [key: string]: any
-  }
-  materials?: {
-    [key: string]: any
-  }
-  components?: {
-    [key: string]: any
-  }
-}
 
 function checkForValidProperties(
   object: { hasOwnProperty: (arg0: string) => any },
@@ -173,17 +167,17 @@ export default class Material {
   private _magnificationFilter: number
   private _strict: boolean
   private _count: number
-  private _template: Template
+  private _template: Fabric
   private _uniforms: any
   uniforms: any
-  private _translucentFunctions: (() => void | boolean)[]
+  private _translucentFunctions: TranslucentType[]
 
-  public translucent!: (() => void) | boolean
+  public translucent!: TranslucentType
   public type: string
   public shaderSource: string
-  public materials: {}
+  public materials: { [key: string]: Material }
   private _defaultTexture!: Texture
-  private _loadedImages!: { id: string; image: unknown }[]
+  private _loadedImages!: { id: string; image: SourceType }[]
   static _materialCache: {
     _materials: { [type: string]: any }
     addMaterial: (type: string, materialTemplate: any) => void
@@ -194,6 +188,8 @@ export default class Material {
   private _textures: any
   private _updateFunctions: Function[] = []
   private _texturePaths: any
+  private _loadedCubeMaps: any
+  static ColorType: string
 
   constructor(options: MaterialOptions) {
     this._minificationFilter = defaultValue(
@@ -226,7 +222,7 @@ export default class Material {
     this._uniforms = {}
     this._translucentFunctions = []
 
-    let translucent
+    let translucent: ((result: Material) => void) | boolean | undefined
 
     // If the cache contains this material type, build the material template off of the stored template.
     const cachedMaterial = Material._materialCache.getMaterial(this.type)
@@ -246,6 +242,69 @@ export default class Material {
 
     this._createMethodDefinition(this)
     this._createUniforms(this)
+    this._createSubMaterials(this)
+
+    const defaultTranslucent =
+      this._translucentFunctions.length === 0 ? true : undefined
+    translucent = defaultValue(translucent, defaultTranslucent)
+    translucent = defaultValue(options.translucent, translucent)
+
+    if (Defined(translucent)) {
+      if (typeof translucent === 'function') {
+        const wrappedTranslucent = () => {
+          return translucent(this)
+        }
+        this._translucentFunctions.push(wrappedTranslucent)
+      } else {
+        this._translucentFunctions.push(translucent)
+      }
+    }
+  }
+
+  // Create all sub-materials by combining source and uniforms together.
+  private _createSubMaterials(material: Material) {
+    const strict = material._strict
+    const subMaterialTemplates = material._template.materials
+    for (const subMaterialId in subMaterialTemplates) {
+      // Construct the sub-material.
+      const subMaterial = new Material({
+        strict: strict,
+        fabric: subMaterialTemplates[subMaterialId],
+        count: material._count
+      })
+      material._count = subMaterial._count
+      material._uniforms = combine(
+        material._uniforms,
+        subMaterial._uniforms,
+        true
+      )
+      material.materials[subMaterialId] = subMaterial
+      material._translucentFunctions = material._translucentFunctions.concat(
+        subMaterial._translucentFunctions
+      )
+
+      // Make the material's czm_getMaterial unique by appending the sub-material type.
+      const originalMethodName = 'czm_getMaterial'
+      const newMethodName = `${originalMethodName}_${material._count++}`
+      replaceToken(subMaterial, originalMethodName, newMethodName)
+      material.shaderSource = subMaterial.shaderSource + material.shaderSource
+
+      // Replace each material id with an czm_getMaterial method call.
+      const materialMethodCall = `${newMethodName}(materialInput)`
+      const tokensReplacedCount = replaceToken(
+        material,
+        subMaterialId,
+        materialMethodCall
+      )
+
+      // >>includeStart('debug', pragmas.debug);
+      if (tokensReplacedCount === 0 && strict) {
+        throw new DeveloperError(
+          `strict: shader source does not use material '${subMaterialId}'.`
+        )
+      }
+      // >>includeEnd('debug');
+    }
   }
 
   private _createUniforms(material: Material) {
@@ -274,7 +333,7 @@ export default class Material {
       replacedTokenCount = replaceToken(
         material,
         uniformId,
-        uniformValue,
+        uniformValue as string,
         false
       )
       // >>includeStart('debug', pragmas.debug);
@@ -492,7 +551,10 @@ export default class Material {
             if (component === 'diffuse' || component === 'emission') {
               const isFusion =
                 isMultiMaterial &&
-                this._isMaterialFused(components[component], material)
+                this._isMaterialFused(
+                  components[component as 'diffuse' | 'emission']!,
+                  material
+                )
               const componentSource = isFusion
                 ? components[component]
                 : `czm_gammaCorrect(${components[component]})`
@@ -500,7 +562,7 @@ export default class Material {
             } else if (component === 'alpha') {
               material.shaderSource += `material.alpha = ${components.alpha}; \n`
             } else {
-              material.shaderSource += `material.${component} = ${components[component]};\n`
+              material.shaderSource += `material.${component} = ${components[component as 'specular' | 'shininess' | 'normal']};\n`
             }
           }
         }
@@ -565,11 +627,107 @@ export default class Material {
     let uniformId
 
     const loadedImages = this._loadedImages
-    const length = loadedImages.length
+    let length = loadedImages.length
     for (i = 0; i < length; ++i) {
       const loadedImage = loadedImages[i]
       uniformId = loadedImage.id
-      const image = loadedImage.image
+      let image = loadedImage.image
+
+      // Images transcoded from KTX2 can contain multiple mip levels:
+      // https://github.khronos.org/KTX-Specification/#_mip_level_array
+      let mipLevels
+      if (Array.isArray(image)) {
+        // highest detail mip should be level 0
+        mipLevels = image.slice(1, image.length).map(function (mipLevel) {
+          return mipLevel.bufferView
+        })
+        image = image[0]
+      }
+
+      const sampler = new Sampler({
+        minificationFilter: this._minificationFilter,
+        magnificationFilter: this._magnificationFilter
+      })
+
+      let texture
+
+      if (Defined(image.internalFormat)) {
+        texture = new Texture({
+          context: context,
+          pixelFormat: image.internalFormat,
+          width: image.width,
+          height: image.height,
+          source: {
+            arrayBufferView: image.bufferView,
+            mipLevels: mipLevels
+          },
+          sampler: sampler
+        })
+      } else {
+        texture = new Texture({
+          context: context,
+          source: image,
+          sampler: sampler
+        })
+      }
+
+      // The material destroys its old texture only after the new one has been loaded.
+      // This will ensure a smooth swap of textures and prevent the default texture
+      // from appearing for a few frames.
+      const oldTexture = this._textures[uniformId]
+      if (Defined(oldTexture) && oldTexture !== this._defaultTexture) {
+        oldTexture.destroy()
+      }
+      this._textures[uniformId] = texture
+
+      const uniformDimensionsName = `${uniformId}Dimensions`
+      if (this.uniforms.hasOwnProperty(uniformDimensionsName)) {
+        const uniformDimensions = this.uniforms[uniformDimensionsName]
+        uniformDimensions.x = texture.width
+        uniformDimensions.y = texture.height
+      }
+    }
+
+    loadedImages.length = 0
+
+    const loadedCubeMaps = this._loadedCubeMaps
+    length = loadedCubeMaps.length
+
+    for (i = 0; i < length; ++i) {
+      const loadedCubeMap = loadedCubeMaps[i]
+      uniformId = loadedCubeMap.id
+      const images = loadedCubeMap.images
+
+      const cubeMap = new CubeMap({
+        context: context,
+        source: {
+          positiveX: images[0],
+          negativeX: images[1],
+          positiveY: images[2],
+          negativeY: images[3],
+          positiveZ: images[4],
+          negativeZ: images[5]
+        },
+        sampler: new Sampler({
+          minificationFilter: this._minificationFilter,
+          magnificationFilter: this._magnificationFilter
+        })
+      })
+
+      this._textures[uniformId] = cubeMap
+    }
+
+    loadedCubeMaps.length = 0
+    const updateFunctions = this._updateFunctions
+    length = updateFunctions.length
+    for (i = 0; i < length; ++i) {
+      updateFunctions[i](this, context)
+    }
+    const subMaterials = this.materials
+    for (const name in subMaterials) {
+      if (subMaterials.hasOwnProperty(name)) {
+        subMaterials[name].update(context)
+      }
     }
   }
   public isTranslucent() {
@@ -603,3 +761,25 @@ Material.DefaultImageId = 'czm_defaultImage'
  * @type {string}
  */
 Material.DefaultCubeMapId = 'czm_defaultCubeMap'
+
+/**
+ * Gets the name of the color material.
+ * @type {string}
+ * @readonly
+ */
+Material.ColorType = 'Color'
+Material._materialCache.addMaterial(Material.ColorType, {
+  fabric: {
+    type: Material.ColorType,
+    uniforms: {
+      color: new Color(1.0, 0.0, 0.0, 0.5)
+    },
+    components: {
+      diffuse: 'color.rgb',
+      alpha: 'color.a'
+    }
+  },
+  translucent: function (material: Material) {
+    return material.uniforms.color.alpha < 1.0
+  }
+})

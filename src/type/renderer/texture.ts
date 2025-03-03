@@ -17,6 +17,8 @@ export interface SourceType {
   arrayBufferView?: Uint8Array
   framebuffer?: Framebuffer
   mipLevels?: Uint8Array[]
+  internalFormat?: number
+  bufferView?: Uint8Array
 }
 export interface TextureOptions {
   id?: string
