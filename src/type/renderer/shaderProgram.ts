@@ -4,6 +4,12 @@ export interface ShaderProgramOptions {
   vertexShaderSource: string
   fragmentShaderSource: string
   gl: ContextType
+
+  vertexShaderText?: string
+  fragmentShaderText?: string
+  logShaderCompilation?: boolean
+  debugShaders?: boolean
+  attributeLocations?: { [key: string]: number }
 }
 
 export interface ShaderSourceCache {

@@ -291,6 +291,148 @@ export default class BatchTable {
     return value.x
   }
 
+  /**
+   * Gets a function that will update a vertex shader to contain functions for looking up values in the batch table.
+   *
+   * @returns {BatchTable.updateVertexShaderSourceCallback} A callback for updating a vertex shader source.
+   */
+  public getVertexShaderCallback() {
+    const attributes = this._attributes
+    if (attributes.length === 0) {
+      return function (source: string) {
+        return source
+      }
+    }
+
+    let batchTableShader = 'uniform highp sampler2D batchTexture; \n'
+    batchTableShader += `${this._getGlslComputeSt(this)}\n`
+
+    const length = attributes.length
+    for (let i = 0; i < length; ++i) {
+      batchTableShader += this._getGlslAttributeFunction(this, i)
+    }
+
+    return function (source: string) {
+      const mainIndex = source.indexOf('void main')
+      const beforeMain = source.substring(0, mainIndex)
+      const afterMain = source.substring(mainIndex)
+      return `${beforeMain}\n${batchTableShader}\n${afterMain}`
+    }
+  }
+
+  private _getGlslAttributeFunction(
+    batchTable: BatchTable,
+    attributeIndex: number
+  ) {
+    const attributes = batchTable._attributes
+    const attribute = attributes[attributeIndex]
+    const componentsPerAttribute = attribute.componentsPerAttribute
+    const functionName = attribute.functionName
+    const functionReturnType = this._getComponentType(componentsPerAttribute)
+    const functionReturnValue = this._getComponentSwizzle(
+      componentsPerAttribute
+    )
+
+    const offset = batchTable._offsets[attributeIndex]
+    let glslFunction =
+      `${functionReturnType} ${functionName}(float batchId) \n` +
+      `{ \n` +
+      `    vec2 st = computeSt(batchId); \n` +
+      `    st.x += batchTextureStep.x * float(${offset}); \n`
+
+    if (
+      batchTable._packFloats &&
+      attribute.componentDatatype !== PixelDatatype.UNSIGNED_BYTE
+    ) {
+      glslFunction +=
+        'vec4 textureValue; \n' +
+        'textureValue.x = czm_unpackFloat(texture(batchTexture, st)); \n' +
+        'textureValue.y = czm_unpackFloat(texture(batchTexture, st + vec2(batchTextureStep.x, 0.0))); \n' +
+        'textureValue.z = czm_unpackFloat(texture(batchTexture, st + vec2(batchTextureStep.x * 2.0, 0.0))); \n' +
+        'textureValue.w = czm_unpackFloat(texture(batchTexture, st + vec2(batchTextureStep.x * 3.0, 0.0))); \n'
+    } else {
+      glslFunction += '    vec4 textureValue = texture(batchTexture, st); \n'
+    }
+
+    glslFunction += `    ${functionReturnType} value = textureValue${functionReturnValue}; \n`
+
+    if (
+      batchTable._pixelDatatype === PixelDatatype.UNSIGNED_BYTE &&
+      attribute.componentDatatype === ComponentDatatype.UNSIGNED_BYTE &&
+      !attribute.normalize
+    ) {
+      glslFunction += 'value *= 255.0; \n'
+    } else if (
+      batchTable._pixelDatatype === PixelDatatype.FLOAT &&
+      attribute.componentDatatype === ComponentDatatype.UNSIGNED_BYTE &&
+      attribute.normalize
+    ) {
+      glslFunction += 'value /= 255.0; \n'
+    }
+
+    glslFunction += `    return value; \n` + `} \n`
+    return glslFunction
+  }
+
+  private _getComponentType(componentsPerAttribute: number) {
+    if (componentsPerAttribute === 1) {
+      return 'float'
+    }
+
+    return `vec${componentsPerAttribute}`
+  }
+
+  private _getComponentSwizzle(componentsPerAttribute: number) {
+    if (componentsPerAttribute === 1) {
+      return '.x'
+    } else if (componentsPerAttribute === 2) {
+      return '.xy'
+    } else if (componentsPerAttribute === 3) {
+      return '.xyz'
+    }
+
+    return ''
+  }
+
+  private _getGlslComputeSt(batchTable: BatchTable) {
+    const stride = batchTable._stride
+
+    // GLSL batchId is zero-based: [0, numberOfInstances - 1]
+    if (batchTable._textureDimensions.y === 1) {
+      return (
+        `${
+          'uniform vec4 batchTextureStep; \n' +
+          'vec2 computeSt(float batchId) \n' +
+          '{ \n' +
+          '    float stepX = batchTextureStep.x; \n' +
+          '    float centerX = batchTextureStep.y; \n' +
+          '    float numberOfAttributes = float('
+        }${stride}); \n` +
+        `    return vec2(centerX + (batchId * numberOfAttributes * stepX), 0.5); \n` +
+        `} \n
+        `
+      )
+    }
+
+    return (
+      `${
+        'uniform vec4 batchTextureStep; \n' +
+        'uniform vec2 batchTextureDimensions; \n' +
+        'vec2 computeSt(float batchId) \n' +
+        '{ \n' +
+        '    float stepX = batchTextureStep.x; \n' +
+        '    float centerX = batchTextureStep.y; \n' +
+        '    float stepY = batchTextureStep.z; \n' +
+        '    float centerY = batchTextureStep.w; \n' +
+        '    float numberOfAttributes = float('
+      }${stride}); \n` +
+      `    float xId = mod(batchId * numberOfAttributes, batchTextureDimensions.x); \n` +
+      `    float yId = floor(batchId * numberOfAttributes / batchTextureDimensions.x); \n` +
+      `    return vec2(centerX + (xId * stepX), centerY + (yId * stepY)); \n` +
+      `} \n`
+    )
+  }
+
   private _setPackedAttribute(
     value: Cartesian4,
     array: number[] | Float32Array<ArrayBuffer> | Uint8Array<ArrayBuffer>,

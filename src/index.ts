@@ -132,6 +132,10 @@ import Transforms from './Engine/Core/Transforms'
 
 import TrustedServers from './Engine/Core/TrustedServers'
 
+import WebGLConstants from './Engine/Core/WebGLConstants'
+
+import WindingOrder from './Engine/Core/WindingOrder'
+
 import appendForwardSlash from './Engine/Core/appendForwardSlash'
 
 import buildModuleUrl from './Engine/Core/buildModuleUrl'
@@ -150,15 +154,25 @@ import Context from './Engine/Renderer/Context'
 
 import ContextLimits from './Engine/Renderer/ContextLimits'
 
+import CubeMap from './Engine/Renderer/CubeMap'
+
+import CubeMapFace from './Engine/Renderer/CubeMapFace'
+
 import Framebuffer from './Engine/Renderer/Framebuffer'
 
 import PixelDatatype from './Engine/Renderer/PixelDatatype'
 
 import PixelFormat from './Engine/Renderer/PixelFormat'
 
+import RenderState from './Engine/Renderer/RenderState'
+
 import Sampler from './Engine/Renderer/Sampler'
 
+import ShaderCache from './Engine/Renderer/ShaderCache'
+
 import ShaderProgram from './Engine/Renderer/ShaderProgram'
+
+import ShaderSource from './Engine/Renderer/ShaderSource'
 
 import Texture from './Engine/Renderer/Texture'
 
@@ -174,9 +188,17 @@ import UniformState from './Engine/Renderer/UniformState'
 
 import VertexArray from './Engine/Renderer/VertexArray'
 
+import freezeRenderState from './Engine/Renderer/freezeRenderState'
+
 import Appearance from './Engine/Scene/Appearance'
 
 import BatchTable from './Engine/Scene/BatchTable'
+
+import BlendEquation from './Engine/Scene/BlendEquation'
+
+import BlendFunction from './Engine/Scene/BlendFunction'
+
+import BlendingState from './Engine/Scene/BlendingState'
 
 import Camera from './Engine/Scene/Camera'
 
@@ -274,6 +296,8 @@ export {
   Tipsify,
   Transforms,
   TrustedServers,
+  WebGLConstants,
+  WindingOrder,
   appendForwardSlash,
   buildModuleUrl,
   getImagePixels,
@@ -283,11 +307,16 @@ export {
   Buffer,
   Context,
   ContextLimits,
+  CubeMap,
+  CubeMapFace,
   Framebuffer,
   PixelDatatype,
   PixelFormat,
+  RenderState,
   Sampler,
+  ShaderCache,
   ShaderProgram,
+  ShaderSource,
   Texture,
   TextureMagnificationFilter,
   TextureMinificationFilter,
@@ -295,8 +324,12 @@ export {
   Uniform,
   UniformState,
   VertexArray,
+  freezeRenderState,
   Appearance,
   BatchTable,
+  BlendEquation,
+  BlendFunction,
+  BlendingState,
   Camera,
   CameraEventAggregator,
   FrameState,
@@ -346,7 +379,11 @@ export * from './type/renderer/buffer'
 
 export * from './type/renderer/context'
 
+export * from './type/renderer/cubeMap'
+
 export * from './type/renderer/framebuffer'
+
+export * from './type/renderer/renderState'
 
 export * from './type/renderer/sampler'
 

@@ -10,7 +10,7 @@ export default class Appearance {
   public material: Material
   public translucent: boolean
 
-  private _vertexShaderSource: string | undefined
+  private _vertexShaderSource: string
   private _fragmentShaderSource: string | undefined
   private _renderState: object | undefined
   private _closed: boolean
@@ -39,7 +39,7 @@ export default class Appearance {
      */
     this.translucent = defaultValue(options.translucent, true)
 
-    this._vertexShaderSource = options.vertexShaderSource
+    this._vertexShaderSource = options.vertexShaderSource || ''
     this._fragmentShaderSource = options.fragmentShaderSource
     this._renderState = options.renderState
     this._closed = defaultValue(options.closed, false)
@@ -69,5 +69,27 @@ export default class Appearance {
       rs.depthMask = true
     }
     return rs
+  }
+
+  /**
+   * Procedurally creates the full GLSL fragment shader source for this appearance
+   * taking into account {@link Appearance#fragmentShaderSource} and {@link Appearance#material}.
+   *
+   * @returns {string} The full GLSL fragment shader source.
+   */
+  public getFragmentShaderSource() {
+    const parts = []
+    // if (this.flat) {
+    //   parts.push("#define FLAT");
+    // }
+    // if (this.faceForward) {
+    //   parts.push("#define FACE_FORWARD");
+    // }
+    if (Defined(this.material)) {
+      parts.push(this.material.shaderSource)
+    }
+    parts.push(this.fragmentShaderSource)
+
+    return parts.join('\n')
   }
 }

@@ -172,6 +172,10 @@ export default class Context {
       gl.MAX_CUBE_MAP_TEXTURE_SIZE
     ) // min: 16
 
+    const maximumViewportDimensions = gl.getParameter(gl.MAX_VIEWPORT_DIMS)
+    ContextLimits._maximumViewportWidth = maximumViewportDimensions[0]
+    ContextLimits._maximumViewportHeight = maximumViewportDimensions[1]
+
     // Vertex attribute divisor state cache. Workaround for ANGLE (also look at VertexArray.setVertexAttribDivisor)
     this._vertexAttribDivisors = []
     this._previousDrawInstanced = false

@@ -1,9 +1,36 @@
-const ContextLimits = {
+interface ContextLimits {
+  maximumTextureSize: number
+  maximumVertexTextureImageUnits: number
+  maximumColorAttachments: number
+  _maximumVertexAttributes: number
+  _maximumCubeMapSize: number
+  _minimumAliasedLineWidth: number
+  minimumAliasedLineWidth: number
+
+  maximumAliasedLineWidth: number
+  _maximumAliasedLineWidth: number
+
+  maximumViewportWidth: number
+  _maximumViewportWidth: number
+
+  maximumViewportHeight: number
+  _maximumViewportHeight: number
+}
+
+const ContextLimits: ContextLimits = {
   maximumTextureSize: 0,
   maximumVertexTextureImageUnits: 0,
   maximumColorAttachments: 0,
   _maximumVertexAttributes: 0,
-  _maximumCubeMapSize: 0
+  _maximumCubeMapSize: 0,
+  _minimumAliasedLineWidth: 0,
+  minimumAliasedLineWidth: 0,
+  maximumAliasedLineWidth: 0,
+  _maximumAliasedLineWidth: 0,
+  maximumViewportWidth: 0,
+  _maximumViewportWidth: 0,
+  maximumViewportHeight: 0,
+  _maximumViewportHeight: 0
 }
 
 Object.defineProperties(ContextLimits, {
@@ -22,6 +49,26 @@ Object.defineProperties(ContextLimits, {
   maximumVertexTextureImageUnits: {
     get: function () {
       return ContextLimits._maximumVertexAttributes
+    }
+  },
+  minimumAliasedLineWidth: {
+    get: function () {
+      return ContextLimits._minimumAliasedLineWidth
+    }
+  },
+  maximumAliasedLineWidth: {
+    get: function () {
+      return ContextLimits._maximumAliasedLineWidth
+    }
+  },
+  maximumViewportWidth: {
+    get: function () {
+      return ContextLimits._maximumViewportWidth
+    }
+  },
+  maximumViewportHeight: {
+    get: function () {
+      return ContextLimits._maximumViewportHeight
     }
   }
 })

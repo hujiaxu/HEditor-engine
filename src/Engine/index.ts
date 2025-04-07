@@ -132,6 +132,10 @@ import Transforms from './Core/Transforms'
 
 import TrustedServers from './Core/TrustedServers'
 
+import WebGLConstants from './Core/WebGLConstants'
+
+import WindingOrder from './Core/WindingOrder'
+
 import appendForwardSlash from './Core/appendForwardSlash'
 
 import buildModuleUrl from './Core/buildModuleUrl'
@@ -150,15 +154,25 @@ import Context from './Renderer/Context'
 
 import ContextLimits from './Renderer/ContextLimits'
 
+import CubeMap from './Renderer/CubeMap'
+
+import CubeMapFace from './Renderer/CubeMapFace'
+
 import Framebuffer from './Renderer/Framebuffer'
 
 import PixelDatatype from './Renderer/PixelDatatype'
 
 import PixelFormat from './Renderer/PixelFormat'
 
+import RenderState from './Renderer/RenderState'
+
 import Sampler from './Renderer/Sampler'
 
+import ShaderCache from './Renderer/ShaderCache'
+
 import ShaderProgram from './Renderer/ShaderProgram'
+
+import ShaderSource from './Renderer/ShaderSource'
 
 import Texture from './Renderer/Texture'
 
@@ -174,9 +188,17 @@ import UniformState from './Renderer/UniformState'
 
 import VertexArray from './Renderer/VertexArray'
 
+import freezeRenderState from './Renderer/freezeRenderState'
+
 import Appearance from './Scene/Appearance'
 
 import BatchTable from './Scene/BatchTable'
+
+import BlendEquation from './Scene/BlendEquation'
+
+import BlendFunction from './Scene/BlendFunction'
+
+import BlendingState from './Scene/BlendingState'
 
 import Camera from './Scene/Camera'
 
@@ -274,6 +296,8 @@ export {
   Tipsify,
   Transforms,
   TrustedServers,
+  WebGLConstants,
+  WindingOrder,
   appendForwardSlash,
   buildModuleUrl,
   getImagePixels,
@@ -283,11 +307,16 @@ export {
   Buffer,
   Context,
   ContextLimits,
+  CubeMap,
+  CubeMapFace,
   Framebuffer,
   PixelDatatype,
   PixelFormat,
+  RenderState,
   Sampler,
+  ShaderCache,
   ShaderProgram,
+  ShaderSource,
   Texture,
   TextureMagnificationFilter,
   TextureMinificationFilter,
@@ -295,8 +324,12 @@ export {
   Uniform,
   UniformState,
   VertexArray,
+  freezeRenderState,
   Appearance,
   BatchTable,
+  BlendEquation,
+  BlendFunction,
+  BlendingState,
   Camera,
   CameraEventAggregator,
   FrameState,
